@@ -16,5 +16,5 @@ CREATE TABLE sites (
   code text primary key,
   user_id int REFERENCES users(id),
   name text,
-  created_at date
+  created_at date DEFAULT now()
 );

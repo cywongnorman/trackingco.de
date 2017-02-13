@@ -2,8 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
+	"time"
 
+	"github.com/fjl/go-couchdb"
 	"github.com/graphql-go/graphql"
+	"github.com/lucsky/cuid"
 )
 
 type GraphQLRequest struct {
@@ -48,8 +52,32 @@ var compendiumType = graphql.NewObject(
 		Fields: graphql.Fields{
 			"sessions":  &graphql.Field{Type: graphql.Int},
 			"pageviews": &graphql.Field{Type: graphql.Int},
-			"referrers": &graphql.Field{Type: graphql.NewList(entryType)},
-			"pages":     &graphql.Field{Type: graphql.NewList(entryType)},
+			"referrers": &graphql.Field{
+				Type: graphql.NewList(entryType),
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					d := p.Source.(Compendium).Referrers
+					entries := make([]Entry, len(d))
+					i := 0
+					for addr, count := range d {
+						entries[i] = Entry{addr, count}
+						i++
+					}
+					return entries, nil
+				},
+			},
+			"pages": &graphql.Field{
+				Type: graphql.NewList(entryType),
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					d := p.Source.(Compendium).Pages
+					entries := make([]Entry, len(d))
+					i := 0
+					for addr, count := range d {
+						entries[i] = Entry{addr, count}
+						i++
+					}
+					return entries, nil
+				},
+			},
 		},
 	},
 )
@@ -61,8 +89,31 @@ var siteType = graphql.NewObject(
 			"code":       &graphql.Field{Type: graphql.String},
 			"name":       &graphql.Field{Type: graphql.String},
 			"created_at": &graphql.Field{Type: graphql.String},
-			"days":       &graphql.Field{Type: graphql.NewList(compendiumType)},
-			"months":     &graphql.Field{Type: graphql.NewList(compendiumType)},
+			"user_id":    &graphql.Field{Type: graphql.String},
+			"days": &graphql.Field{
+				Type: graphql.NewList(compendiumType),
+				Args: graphql.FieldConfigArgument{
+					"last": &graphql.ArgumentConfig{
+						Description:  "number of last days to fetch",
+						Type:         graphql.Int,
+						DefaultValue: 30,
+					},
+				},
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					res := CouchDBResults{}
+					sitecode := p.Source.(Site).Code
+					oldestdate := time.Now().AddDate(0, 0, -p.Args["last"].(int)).Format("20060102")
+					err := couch.AllDocs(&res, couchdb.Options{
+						"startkey": sitecode + ":" + oldestdate,
+						"endkey":   sitecode + ":",
+					})
+					if err != nil {
+						return nil, err
+					}
+					return res.toCompendiumList(), nil
+				},
+			},
+			"months": &graphql.Field{Type: graphql.NewList(compendiumType)},
 		},
 	},
 )
@@ -80,9 +131,19 @@ var userType = graphql.NewObject(
 	graphql.ObjectConfig{
 		Name: "User",
 		Fields: graphql.Fields{
-			"id":       &graphql.Field{Type: graphql.Int},
-			"name":     &graphql.Field{Type: graphql.String},
-			"sites":    &graphql.Field{Type: graphql.NewList(siteType)},
+			"id":   &graphql.Field{Type: graphql.Int},
+			"name": &graphql.Field{Type: graphql.String},
+			"sites": &graphql.Field{
+				Type: graphql.NewList(siteType),
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					var sites []Site
+					err = pg.Model(Site{}).Where("user_id = ?", p.Source.(User).Id).Scan(&sites)
+					if err != nil {
+						return nil, err
+					}
+					return sites, nil
+				},
+			},
 			"settings": &graphql.Field{Type: settingsType},
 		},
 	},
@@ -94,9 +155,7 @@ var rootQuery = graphql.ObjectConfig{
 		"me": &graphql.Field{
 			Type: userType,
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				user := User{
-					Id: p.Context.Value("me").(int),
-				}
+				user := User{Id: p.Context.Value("loggeduser").(int)}
 				if err := pg.Model(user).Where(user).Scan(&user); err != nil {
 					return nil, err
 				}
@@ -112,7 +171,14 @@ var rootQuery = graphql.ObjectConfig{
 				},
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				return nil, nil
+				site := Site{Code: p.Args["code"].(string)}
+				if err := pg.Model(site).Where(site).Scan(&site); err != nil {
+					return nil, err
+				}
+				if site.UserId != p.Context.Value("loggeduser").(int) {
+					return nil, errors.New("you're not authorized to view this site.")
+				}
+				return site, nil
 			},
 		},
 	},
@@ -139,19 +205,61 @@ var rootMutation = graphql.ObjectConfig{
 				},
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				return nil, nil
+				site := Site{
+					Code:   cuid.New(),
+					Name:   p.Args["name"].(string),
+					UserId: p.Context.Value("loggeduser").(int),
+				}
+				if err := pg.Create(&site); err != nil {
+					return nil, err
+				}
+				return site, nil
+			},
+		},
+		"renameSite": &graphql.Field{
+			Type: siteType,
+			Args: graphql.FieldConfigArgument{
+				"code": &graphql.ArgumentConfig{
+					Description: "the code of the site to rename",
+					Type:        graphql.String,
+				},
+				"name": &graphql.ArgumentConfig{
+					Description: "a new name for the site",
+					Type:        graphql.String,
+				},
+			},
+			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				site := Site{Code: p.Args["code"].(string)}
+				if err := pg.Model(site).Where(site).Scan(&site); err != nil {
+					return nil, err
+				}
+				if site.UserId != p.Context.Value("loggeduser").(int) {
+					return nil, errors.New("you're not authorized to update this site.")
+				}
+				site.Name = p.Args["name"].(string)
+				if err = pg.Updates(&site); err != nil {
+					return nil, err
+				}
+				return site, nil
 			},
 		},
 		"deleteSite": &graphql.Field{
 			Type: resultType,
 			Args: graphql.FieldConfigArgument{
 				"code": &graphql.ArgumentConfig{
-					Description: "the unique code for the site",
+					Description: "the code of the site to rename",
 					Type:        graphql.String,
 				},
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				return nil, nil
+				err = pg.Where(
+					"code = ? AND user_id = ?",
+					p.Args["code"].(string), p.Context.Value("loggeduser").(int)).
+					Delete(Site{})
+				if err != nil {
+					return nil, err
+				}
+				return Result{true}, nil
 			},
 		},
 		"changeSiteOrder": &graphql.Field{

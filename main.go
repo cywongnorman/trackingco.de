@@ -64,7 +64,7 @@ func main() {
 			log.Print("failed to read graphql request: ", err)
 		}
 		c.SetContentType("application/json")
-		context := context.WithValue(context.TODO(), "me", s.LoggedAs)
+		context := context.WithValue(context.TODO(), "loggeduser", s.LoggedAs)
 		err = c.JSON(200, query(gqr, context))
 		context.Done()
 		if err != nil {
