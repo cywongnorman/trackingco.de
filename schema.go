@@ -102,7 +102,7 @@ var siteType = graphql.NewObject(
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 					res := CouchDBResults{}
 					sitecode := p.Source.(Site).Code
-					oldestdate := time.Now().AddDate(0, 0, -p.Args["last"].(int)).Format("20060102")
+					oldestdate := time.Now().AddDate(0, 0, -p.Args["last"].(int)).Format(DATEFORMAT)
 					err := couch.AllDocs(&res, couchdb.Options{
 						"startkey": sitecode + ":" + oldestdate,
 						"endkey":   sitecode + ":",

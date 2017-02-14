@@ -7,6 +7,15 @@ type Compendium struct {
 	Pages     map[string]int `json:"pages,omitempty"`
 }
 
+type CompendiumDoc struct {
+	Id        string         `json:"_id"`
+	Rev       string         `json:"_rev,omitempty"`
+	Sessions  int            `json:"s"`
+	Pageviews int            `json:"v"`
+	Referrers map[string]int `json:"r"`
+	Pages     map[string]int `json:"p"`
+}
+
 type Entry struct {
 	Address string `json:"addr,omitempty"`
 	Count   int    `json:"count,omitempty"`
@@ -40,16 +49,9 @@ func (_ Site) TableName() string         { return "sites" }
 
 type CouchDBResults struct {
 	Rows []struct {
-		Rev string `json:"rev"`
-		Id  string `json:"id"`
-		Doc struct {
-			Id        string         `json:"_id"`
-			Rev       string         `json:"_rev"`
-			Sessions  int            `json:"s"`
-			Pageviews int            `json:"v"`
-			Referrers map[string]int `json:"r"`
-			Pages     map[string]int `json:"p"`
-		}
+		Rev string        `json:"rev"`
+		Id  string        `json:"id"`
+		Doc CompendiumDoc `json:"doc"`
 	} `json:"rows"`
 }
 
