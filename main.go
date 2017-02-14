@@ -12,7 +12,6 @@ import (
 	"github.com/iris-contrib/graceful"
 	"github.com/kataras/iris"
 	"github.com/kelseyhightower/envconfig"
-	"github.com/lucsky/cuid"
 )
 
 type Settings struct {
@@ -72,30 +71,28 @@ func main() {
 		}
 	})
 
-	api.Get("/t", func(c *iris.Context) {
-		today := time.Now().Format("20060102")
-		track := Track{}
+	api.Get("/t.gif", func(c *iris.Context) {
+		track := Track{
+			Session:      c.RemoteAddr(),
+			TrackingCode: c.FormValue("t"),
+			Page:         c.FormValue("p"),
+			Referrer:     c.FormValue("r"),
+		}
+		log.Print("tracked ", track)
+
 		var entry []byte
-		if err := c.ReadJSON(&track); err != nil {
-			c.EmitError(400)
-			return
-		}
-
-		if track.Session == "" {
-			track.Session = cuid.New()
-		}
-
-		key := track.TrackingCode + today
+		key := track.TrackingCode + ":" + time.Now().Format("20060102")
 		track.TrackingCode = "" // do not store this since it will be already in the key
 		if entry, err = json.Marshal(track); err != nil {
-			c.EmitError(400)
+			c.SetStatusCode(400)
 			return
 		}
+
 		// store to redis
 		rds.Lpush(key, entry)
-		rds.Expire(key, 1000*60*60*24)
+		rds.Expire(key, 60*60*48)
 
-		c.Write(track.Session)
+		c.SetStatusCode(200)
 	})
 
 	graceful.Run(":"+s.Port, time.Duration(10)*time.Second, api)
