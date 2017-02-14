@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"sort"
 	"time"
 
 	"github.com/fjl/go-couchdb"
@@ -39,8 +40,8 @@ var entryType = graphql.NewObject(
 		Name:        "Entry",
 		Description: "A tuple of address / count",
 		Fields: graphql.Fields{
-			"address": &graphql.Field{Type: graphql.String},
-			"count":   &graphql.Field{Type: graphql.Int},
+			"addr":  &graphql.Field{Type: graphql.String},
+			"count": &graphql.Field{Type: graphql.Int},
 		},
 	},
 )
@@ -50,6 +51,7 @@ var compendiumType = graphql.NewObject(
 		Name:        "Compendium",
 		Description: "A day, or a month, maybe an year -- a period of time for which there are stats",
 		Fields: graphql.Fields{
+			"day":       &graphql.Field{Type: graphql.String},
 			"sessions":  &graphql.Field{Type: graphql.Int},
 			"pageviews": &graphql.Field{Type: graphql.Int},
 			"referrers": &graphql.Field{
@@ -62,6 +64,7 @@ var compendiumType = graphql.NewObject(
 						entries[i] = Entry{addr, count}
 						i++
 					}
+					sort.Sort(EntrySort(entries))
 					return entries, nil
 				},
 			},
@@ -75,6 +78,7 @@ var compendiumType = graphql.NewObject(
 						entries[i] = Entry{addr, count}
 						i++
 					}
+					sort.Sort(EntrySort(entries))
 					return entries, nil
 				},
 			},
@@ -102,15 +106,36 @@ var siteType = graphql.NewObject(
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 					res := CouchDBResults{}
 					sitecode := p.Source.(Site).Code
-					oldestdate := time.Now().AddDate(0, 0, -p.Args["last"].(int)).Format(DATEFORMAT)
+					last := p.Args["last"].(int)
+					startday := time.Now().AddDate(0, 0, -last)
+					today := time.Now()
 					err := couch.AllDocs(&res, couchdb.Options{
-						"startkey": sitecode + ":" + oldestdate,
-						"endkey":   sitecode + ":",
+						"startkey":     makeBaseKey(sitecode, startday.Format(DATEFORMAT)),
+						"endkey":       makeBaseKey(sitecode, today.Format(DATEFORMAT)),
+						"include_docs": true,
 					})
 					if err != nil {
 						return nil, err
 					}
-					return res.toCompendiumList(), nil
+					fetcheddays := res.toCompendiumList()
+					days := make([]Compendium, last+1)
+
+					// fill in missing days with zeroes
+					current := startday
+					currentpos := 0
+					fetchedpos := 0
+					for !current.After(today) {
+						if fetcheddays[fetchedpos].Day == current.Format(DATEFORMAT) {
+							days[currentpos] = fetcheddays[fetchedpos]
+							fetchedpos++
+						} else {
+							days[currentpos].Day = current.Format(DATEFORMAT)
+						}
+						current = current.AddDate(0, 0, 1)
+						currentpos++
+					}
+
+					return days, nil
 				},
 			},
 			"months": &graphql.Field{Type: graphql.NewList(compendiumType)},

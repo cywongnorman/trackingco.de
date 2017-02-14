@@ -1,10 +1,13 @@
 package main
 
+import "strings"
+
 type Compendium struct {
-	Sessions  int            `json:"sessions,omitempty"`
-	Pageviews int            `json:"pageviews,omitempty"`
-	Referrers map[string]int `json:"referrers,omitempty"`
-	Pages     map[string]int `json:"pages,omitempty"`
+	Day       string         `json:"day"`
+	Sessions  int            `json:"sessions"`
+	Pageviews int            `json:"pageviews"`
+	Referrers map[string]int `json:"referrers"`
+	Pages     map[string]int `json:"pages"`
 }
 
 type CompendiumDoc struct {
@@ -17,9 +20,15 @@ type CompendiumDoc struct {
 }
 
 type Entry struct {
-	Address string `json:"addr,omitempty"`
-	Count   int    `json:"count,omitempty"`
+	Address string `json:"addr"`
+	Count   int    `json:"count"`
 }
+
+type EntrySort []Entry
+
+func (a EntrySort) Len() int           { return len(a) }
+func (a EntrySort) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a EntrySort) Less(i, j int) bool { return a[i].Count < a[j].Count }
 
 type User struct {
 	Id       int          `json:"id,omitempty" igor:"primary_key"`
@@ -59,6 +68,7 @@ func (res CouchDBResults) toCompendiumList() []Compendium {
 	var c = make([]Compendium, len(res.Rows))
 	for i, row := range res.Rows {
 		c[i] = Compendium{
+			Day:       strings.Split(row.Id, ":")[0],
 			Sessions:  row.Doc.Sessions,
 			Pageviews: row.Doc.Pageviews,
 			Referrers: row.Doc.Referrers,
