@@ -2,16 +2,15 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 	"time"
 
 	"github.com/fjl/go-couchdb"
 	"github.com/galeone/igor"
-	"github.com/hoisie/redis"
 	"github.com/iris-contrib/graceful"
 	"github.com/kataras/iris"
 	"github.com/kelseyhightower/envconfig"
+	"gopkg.in/redis.v5"
 )
 
 type Settings struct {
@@ -37,10 +36,10 @@ func main() {
 	}
 
 	// redis
-	rds = &redis.Client{
+	rds = redis.NewClient(&redis.Options{
 		Addr:     s.RedisAddr,
 		Password: s.RedisPassword,
-	}
+	})
 
 	// postgres
 	pg, err = igor.Connect(s.PostgresURL)
@@ -72,26 +71,37 @@ func main() {
 	})
 
 	api.Get("/t.gif", func(c *iris.Context) {
-		track := Track{
-			Session:      c.RemoteAddr(),
-			TrackingCode: c.FormValue("t"),
-			Page:         c.FormValue("p"),
-			Referrer:     c.FormValue("r"),
-		}
-		log.Print("tracked ", track)
+		code := c.FormValue("t")
+		page := c.FormValue("p")
+		referrer := c.FormValue("r")
 
-		var entry []byte
-		key := track.TrackingCode + ":" + time.Now().Format("20060102")
-		track.TrackingCode = "" // do not store this since it will be already in the key
-		if entry, err = json.Marshal(track); err != nil {
+		if code == "" || page == "" {
 			c.SetStatusCode(400)
 			return
 		}
 
-		// store to redis
-		rds.Lpush(key, entry)
-		rds.Expire(key, 60*60*48)
+		// store data to redis
+		twodays := time.Hour * 48
+		basekey := time.Now().Format("20060102") + ":" + code
 
+		if c.GetCookie("_tcs") == "" {
+			// new session
+			c.SetCookieKV("_tcs", "1")
+
+			rds.Incr(basekey + ":s")
+			rds.Expire(basekey+":s", twodays)
+		}
+
+		rds.Incr(basekey + ":pv")
+		rds.Expire(basekey+":pv", twodays)
+
+		rds.HIncrBy(basekey+":p", page, 1)
+		rds.Expire(basekey+":p", twodays)
+
+		rds.HIncrBy(basekey+":r", referrer, 1)
+		rds.Expire(basekey+":r", twodays)
+
+		log.Print("tracked " + code)
 		c.SetStatusCode(200)
 	})
 

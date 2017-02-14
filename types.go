@@ -1,12 +1,5 @@
 package main
 
-type Track struct {
-	TrackingCode string `json:"t,omitempty"`
-	Session      string `json:"s"`
-	Page         string `json:"p"`
-	Referrer     string `json:"r"`
-}
-
 type Compendium struct {
 	Sessions  int            `json:"sessions,omitempty"`
 	Pageviews int            `json:"pageviews,omitempty"`
