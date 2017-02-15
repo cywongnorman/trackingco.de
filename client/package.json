@@ -1,0 +1,30 @@
+{
+  "name": "trackingco.de-client",
+  "dependencies": {
+    "lokka": "^1.7.0",
+    "lokka-transport-http": "^1.6.1",
+    "react": "^15.4.2",
+    "react-dom": "^15.4.2",
+    "react-hyperscript": "^3.0.0"
+  },
+  "scripts": {
+    "watch": "find -name \"*.js\" ! -name \"bundle.js\" ! -path \"*node_modules*\" | entr browserifyinc -vd app.js -o bundle.js"
+  },
+  "browserify": {
+    "transform": [
+      [
+        "bubleify",
+        {
+          "transforms": {
+            "dangerousTaggedTemplateString": true
+          },
+          "sourceMap": true
+        }
+      ]
+    ]
+  },
+  "devDependencies": {
+    "browserify-incremental": "^3.1.1",
+    "bubleify": "^0.7.0"
+  }
+}

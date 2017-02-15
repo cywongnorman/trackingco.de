@@ -61,5 +61,11 @@ func runServer() {
 		c.SetStatusCode(200)
 	})
 
+	api.Get("/", func(c *iris.Context) {
+		c.ServeFile("client/index.html", false)
+	})
+
+	api.StaticServe("client")
+
 	graceful.Run(":"+s.Port, time.Duration(10)*time.Second, api)
 }

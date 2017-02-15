@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"sort"
-	"time"
 
 	"github.com/fjl/go-couchdb"
 	"github.com/graphql-go/graphql"
@@ -107,11 +106,11 @@ var siteType = graphql.NewObject(
 					res := CouchDBResults{}
 					sitecode := p.Source.(Site).Code
 					last := p.Args["last"].(int)
-					startday := time.Now().AddDate(0, 0, -last)
-					today := time.Now()
+					yesterday := presentDay().AddDate(0, 0, -1)
+					startday := yesterday.AddDate(0, 0, -last)
 					err := couch.AllDocs(&res, couchdb.Options{
 						"startkey":     makeBaseKey(sitecode, startday.Format(DATEFORMAT)),
-						"endkey":       makeBaseKey(sitecode, today.Format(DATEFORMAT)),
+						"endkey":       makeBaseKey(sitecode, yesterday.Format(DATEFORMAT)),
 						"include_docs": true,
 					})
 					if err != nil {
@@ -124,7 +123,7 @@ var siteType = graphql.NewObject(
 					current := startday
 					currentpos := 0
 					fetchedpos := 0
-					for !current.After(today) {
+					for !current.After(yesterday) {
 						if fetcheddays[fetchedpos].Day == current.Format(DATEFORMAT) {
 							days[currentpos] = fetcheddays[fetchedpos]
 							fetchedpos++
