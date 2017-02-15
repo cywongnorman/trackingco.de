@@ -5,7 +5,8 @@
     "lokka-transport-http": "^1.6.1",
     "react": "^15.4.2",
     "react-dom": "^15.4.2",
-    "react-hyperscript": "^3.0.0"
+    "react-hyperscript": "^3.0.0",
+    "recharts": "^0.20.8"
   },
   "scripts": {
     "watch": "find -name \"*.js\" ! -name \"bundle.js\" ! -path \"*node_modules*\" | entr browserifyinc -vd app.js -o bundle.js"
