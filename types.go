@@ -68,7 +68,7 @@ func (res CouchDBResults) toCompendiumList() []Compendium {
 	var c = make([]Compendium, len(res.Rows))
 	for i, row := range res.Rows {
 		c[i] = Compendium{
-			Day:       strings.Split(row.Id, ":")[0],
+			Day:       strings.Split(row.Id, ":")[1],
 			Sessions:  row.Doc.Sessions,
 			Pageviews: row.Doc.Pageviews,
 			Referrers: row.Doc.Referrers,

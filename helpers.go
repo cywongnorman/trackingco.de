@@ -11,7 +11,7 @@ func presentDay() time.Time {
 }
 
 func makeBaseKey(code, day string) string {
-	return day + ":" + code
+	return code + ":" + day
 }
 
 func redisKeyFactory(code, day string) func(string) string {
