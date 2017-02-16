@@ -7,7 +7,6 @@ import (
 
 	"github.com/fjl/go-couchdb"
 	"github.com/graphql-go/graphql"
-	"github.com/lucsky/cuid"
 )
 
 type GraphQLRequest struct {
@@ -247,7 +246,7 @@ var rootMutation = graphql.ObjectConfig{
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 				site := Site{
-					Code:   cuid.New(),
+					Code:   randomString(),
 					Name:   p.Args["name"].(string),
 					UserId: p.Context.Value("loggeduser").(int),
 				}

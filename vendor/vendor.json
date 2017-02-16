@@ -375,6 +375,12 @@
 			"revisionTime": "2015-10-28T00:19:15Z"
 		},
 		{
+			"checksumSHA1": "Y9fXuEUOqrRTLMr+kl4UPUqhWC4=",
+			"path": "github.com/speps/go-hashids",
+			"revision": "4edc50732619c2510e5edee5a846e4c1417390fd",
+			"revisionTime": "2017-01-22T12:21:41Z"
+		},
+		{
 			"checksumSHA1": "fOuTjfiFhmBY4iJJXquzV4ojBy8=",
 			"origin": "github.com/iris-contrib/lego/vendor/github.com/square/go-jose",
 			"path": "github.com/square/go-jose",

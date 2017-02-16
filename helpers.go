@@ -1,6 +1,11 @@
 package main
 
-import "time"
+import (
+	"math/rand"
+	"time"
+
+	"github.com/speps/go-hashids"
+)
 
 const DATEFORMAT = "20060102"
 const (
@@ -25,4 +30,13 @@ func redisKeyFactory(code, day string) func(string) string {
 	return func(subkey string) string {
 		return basekey + ":" + subkey
 	}
+}
+
+func randomString() string {
+	hd := hashids.NewData()
+	hd.MinLength = 5
+	hd.Alphabet = "abcdefghijklmnopqrstuvwxyz1234567890"
+	h := hashids.NewWithData(hd)
+	r, _ := h.Encode([]int{rand.Int()})
+	return r
 }
