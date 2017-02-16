@@ -3,6 +3,12 @@ package main
 import "time"
 
 const DATEFORMAT = "20060102"
+const (
+	SESSIONS  = "s"
+	PAGEVIEWS = "v"
+	REFERRERS = "r"
+	PAGES     = "p"
+)
 
 func presentDay() time.Time {
 	now := time.Now().UTC()

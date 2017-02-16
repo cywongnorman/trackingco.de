@@ -44,18 +44,18 @@ func runServer() {
 			// new session
 			c.SetCookieKV("_tcs", "1")
 
-			rds.Incr(key("s"))
-			rds.Expire(key("s"), twodays)
+			rds.Incr(key(SESSIONS))
+			rds.Expire(key(SESSIONS), twodays)
 		}
 
-		rds.Incr(key("v"))
-		rds.Expire(key("v"), twodays)
+		rds.Incr(key(PAGEVIEWS))
+		rds.Expire(key(PAGEVIEWS), twodays)
 
-		rds.HIncrBy(key("p"), page, 1)
-		rds.Expire(key("p"), twodays)
+		rds.HIncrBy(key(PAGES), page, 1)
+		rds.Expire(key(PAGES), twodays)
 
-		rds.HIncrBy(key("r"), referrer, 1)
-		rds.Expire(key("r"), twodays)
+		rds.HIncrBy(key(REFERRERS), referrer, 1)
+		rds.Expire(key(REFERRERS), twodays)
 
 		log.Print("tracked " + code)
 		c.SetStatusCode(200)

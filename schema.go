@@ -39,8 +39,14 @@ var entryType = graphql.NewObject(
 		Name:        "Entry",
 		Description: "A tuple of address / count",
 		Fields: graphql.Fields{
-			"addr":  &graphql.Field{Type: graphql.String},
-			"count": &graphql.Field{Type: graphql.Int},
+			"a": &graphql.Field{
+				Type:        graphql.String,
+				Description: "the web address.",
+			},
+			"c": &graphql.Field{
+				Type:        graphql.Int,
+				Description: "the number of times it appeared.",
+			},
 		},
 	},
 )
@@ -50,11 +56,21 @@ var compendiumType = graphql.NewObject(
 		Name:        "Compendium",
 		Description: "A day, or a month, maybe an year -- a period of time for which there are stats",
 		Fields: graphql.Fields{
-			"day":       &graphql.Field{Type: graphql.String},
-			"sessions":  &graphql.Field{Type: graphql.Int},
-			"pageviews": &graphql.Field{Type: graphql.Int},
-			"referrers": &graphql.Field{
-				Type: graphql.NewList(entryType),
+			"day": &graphql.Field{
+				Type:        graphql.String,
+				Description: "the date in format YYYYMMDD.",
+			},
+			SESSIONS: &graphql.Field{
+				Type:        graphql.Int,
+				Description: "total number of sessions.",
+			},
+			PAGEVIEWS: &graphql.Field{
+				Type:        graphql.Int,
+				Description: "total number of pageviews.",
+			},
+			REFERRERS: &graphql.Field{
+				Type:        graphql.NewList(entryType),
+				Description: "a list of entries of referrers, sorted by the number of occurrences.",
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 					d := p.Source.(Compendium).Referrers
 					entries := make([]Entry, len(d))
@@ -67,8 +83,9 @@ var compendiumType = graphql.NewObject(
 					return entries, nil
 				},
 			},
-			"pages": &graphql.Field{
-				Type: graphql.NewList(entryType),
+			PAGES: &graphql.Field{
+				Type:        graphql.NewList(entryType),
+				Description: "a list of entries of viewed pages, sorted by the number of occurrences.",
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 					d := p.Source.(Compendium).Pages
 					entries := make([]Entry, len(d))

@@ -27,27 +27,27 @@ func daily() {
 		log.Print(" > site ", site.Code, " (", site.Name, "), from ", site.UserId, ":")
 		key := redisKeyFactory(site.Code, day)
 
-		stats := CompendiumDoc{
+		stats := Compendium{
 			Id:        makeBaseKey(site.Code, day),
 			Referrers: make(map[string]int),
 			Pages:     make(map[string]int),
 		}
 
 		// grab stats from redis
-		if val, err := rds.Get(key("s")).Int64(); err == nil {
+		if val, err := rds.Get(key(SESSIONS)).Int64(); err == nil {
 			stats.Sessions = int(val)
 		}
-		if val, err := rds.Get(key("v")).Int64(); err == nil {
+		if val, err := rds.Get(key(PAGEVIEWS)).Int64(); err == nil {
 			stats.Pageviews = int(val)
 		}
-		if val, err := rds.HGetAll(key("r")).Result(); err == nil {
+		if val, err := rds.HGetAll(key(REFERRERS)).Result(); err == nil {
 			for k, v := range val {
 				if count, err := strconv.Atoi(v); err == nil {
 					stats.Referrers[k] = count
 				}
 			}
 		}
-		if val, err := rds.HGetAll(key("p")).Result(); err == nil {
+		if val, err := rds.HGetAll(key(PAGES)).Result(); err == nil {
 			for k, v := range val {
 				if count, err := strconv.Atoi(v); err == nil {
 					stats.Pages[k] = count

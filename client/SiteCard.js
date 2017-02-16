@@ -18,8 +18,8 @@ module.exports = React.createClass({
         code
         days(last:7) {
           day
-          sessions
-          pageviews
+          s
+          v
         }
       }
     }
@@ -50,12 +50,12 @@ module.exports = React.createClass({
           h(R.ResponsiveContainer, {height: 200, width: '100%'}, [
             h(R.ComposedChart, {data: this.state.site.days}, [
               h(R.Bar, {
-                dataKey: 'sessions',
+                dataKey: 's',
                 fill: '#8884d8',
                 isAnimationActive: false
               }),
               h(R.Line, {
-                dataKey: 'pageviews',
+                dataKey: 'v',
                 stroke: '#82ca9d',
                 isAnimationActive: false
               })
