@@ -74,6 +74,13 @@ func runServer() {
 		rds.Expire(key(PAGES), twodays)
 
 		log.Print("tracked " + code)
+
+		// no cache
+		c.SetHeader("Cache-Control", "no-cache, no-store, must-revalidate")
+		c.SetHeader("Pragma", "no-cache")
+		c.SetHeader("Expires", "0")
+
+		c.SetHeader("Content-Type", "image/gif")
 		c.SetStatusCode(200)
 	})
 
