@@ -1,2 +1,2 @@
-(function(t,r){var v=t.createElement('img');v.src='http://cantillon.alhur.es:6546/t.gif?r='+t.referrer+'&p='+r.href+'&t=code';t.body.appendChild(v);})(document,location)
+(function(t,c){var v=t.createElement('img');v.src='http://cantillon.alhur.es:6546/t.gif?r='+t.referrer+'&t='+c;t.body.appendChild(v);})(document,'code')
 
