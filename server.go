@@ -27,13 +27,10 @@ func runServer() {
 		}
 	})
 
+	app.Get("/", func(c *iris.Context) { c.ServeFile("client/index.html", false) })
+	app.Get("/client/{file:.*}", func(c *iris.Context) { c.ServeFile("client/"+c.Param("file"), false) })
+
 	app.Get("/{x:[0-9a-zA-Z]+.(?:gif|jpg|jpeg|png)}", track)
-
-	app.Get("/", func(c *iris.Context) {
-		c.ServeFile("client/index.html", false)
-	})
-
-	app.StaticServe("client")
 
 	log.Print("listening at :" + s.Port)
 	app.Listen(":" + s.Port)
