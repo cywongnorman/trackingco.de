@@ -36,7 +36,7 @@ module.exports = React.createClass({
   },
 
   componentWillReceiveProps (nextProps) {
-    this.setState({code: nextProps.code}, this.query)
+    if (nextProps.code !== this.props.code) this.setState({code: nextProps.code}, this.query)
   },
 
   render () {

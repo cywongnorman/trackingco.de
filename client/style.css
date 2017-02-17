@@ -5,3 +5,15 @@
 .card {
   margin: 0 5px;
 }
+
+.newsite:hover { color: #999999; }
+.newsite .card-content {
+  text-align: center;
+  cursor: pointer;
+}
+.newsite i.fa {
+  font-size: 5em;
+  display: inline-block;
+  margin: 15px;
+}
+.newsite button { margin-top: 5px; }
