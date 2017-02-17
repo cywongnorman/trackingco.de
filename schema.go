@@ -245,10 +245,11 @@ var rootMutation = graphql.ObjectConfig{
 				},
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				userId := p.Context.Value("loggeduser").(int)
 				site := Site{
-					Code:   randomString(),
+					Code:   makeCodeForUser(userId),
 					Name:   p.Args["name"].(string),
-					UserId: p.Context.Value("loggeduser").(int),
+					UserId: userId,
 				}
 				if err := pg.Create(&site); err != nil {
 					return nil, err

@@ -32,11 +32,12 @@ func redisKeyFactory(code, day string) func(string) string {
 	}
 }
 
-func randomString() string {
+func makeCodeForUser(userId int) string {
 	hd := hashids.NewData()
 	hd.MinLength = 5
 	hd.Alphabet = "abcdefghijklmnopqrstuvwxyz1234567890"
 	h := hashids.NewWithData(hd)
-	r, _ := h.Encode([]int{rand.Int()})
+	rand.Seed(time.Now().UnixNano())
+	r, _ := h.Encode([]int{userId, rand.Intn(9999)})
 	return r
 }
