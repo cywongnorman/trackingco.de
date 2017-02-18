@@ -8,7 +8,8 @@ module.exports = withClickOutside(React.createClass({
   getInitialState () {
     return {
       name: '',
-      writing: false
+      writing: false,
+      waiting: false
     }
   },
 
@@ -37,7 +38,9 @@ module.exports = withClickOutside(React.createClass({
         ? h('.card-content', [
           h('form', {onSubmit: this.submit}, [
             h('input.input', {onChange: this.write, value: this.state.name}),
-            h('button.button.is-primary', 'add')
+            h('button.button.is-primary', {
+              className: this.state.waiting ? 'is-loading' : ''
+            }, 'add')
           ])
         ])
         : h('i.fa.fa-plus')
@@ -55,6 +58,7 @@ module.exports = withClickOutside(React.createClass({
 
   submit (e) {
     e.preventDefault()
+    this.setState({waiting: true})
     this.mutate()
   },
 
