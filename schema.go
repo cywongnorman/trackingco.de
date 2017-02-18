@@ -158,15 +158,6 @@ var siteType = graphql.NewObject(
 	},
 )
 
-var settingsType = graphql.NewObject(
-	graphql.ObjectConfig{
-		Name: "Settings",
-		Fields: graphql.Fields{
-			"sites_order": &graphql.Field{Type: graphql.NewList(graphql.String)},
-		},
-	},
-)
-
 var userType = graphql.NewObject(
 	graphql.ObjectConfig{
 		Name: "User",
@@ -177,14 +168,20 @@ var userType = graphql.NewObject(
 				Type: graphql.NewList(siteType),
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 					var sites []Site
-					err = pg.Model(Site{}).Where("user_id = ?", p.Source.(User).Id).Scan(&sites)
+					err = pg.Raw(`
+SELECT code, name, user_id, created_at FROM sites
+  INNER JOIN (
+    SELECT unnest(sites_order) AS c,
+           generate_subscripts(sites_order, 1) as o FROM users
+  )t ON c = code
+WHERE user_id = ?
+ORDER BY o`, p.Source.(User).Id).Scan(&sites)
 					if err != nil {
 						return nil, err
 					}
 					return sites, nil
 				},
 			},
-			"settings": &graphql.Field{Type: settingsType},
 		},
 	},
 )
@@ -196,7 +193,11 @@ var rootQuery = graphql.ObjectConfig{
 			Type: userType,
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 				user := User{Id: p.Context.Value("loggeduser").(int)}
-				if err := pg.Model(user).Where(user).Scan(&user); err != nil {
+				err = pg.Model(user).
+					Select("id, name, email").
+					Where(user).
+					Scan(&user)
+				if err != nil {
 					return nil, err
 				}
 				return user, nil
@@ -246,12 +247,28 @@ var rootMutation = graphql.ObjectConfig{
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 				userId := p.Context.Value("loggeduser").(int)
+				code := makeCodeForUser(userId)
 				site := Site{
-					Code:   makeCodeForUser(userId),
+					Code:   code,
 					Name:   p.Args["name"].(string),
 					UserId: userId,
 				}
-				if err := pg.Create(&site); err != nil {
+
+				tx := pg.Begin()
+				if err = tx.Create(&site); err != nil {
+					tx.Rollback()
+					return nil, err
+				}
+
+				err = tx.Exec(
+					`UPDATE users SET sites_order = array_append(sites_order, ?) WHERE id = ?`,
+					site.Code, userId)
+				if err != nil {
+					tx.Rollback()
+					return nil, err
+				}
+
+				if err = tx.Commit(); err != nil {
 					return nil, err
 				}
 				return site, nil

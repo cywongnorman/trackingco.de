@@ -9,7 +9,8 @@ module.exports = withClickOutside(React.createClass({
     return {
       name: '',
       writing: false,
-      waiting: false
+      waiting: false,
+      error: null
     }
   },
 
@@ -27,7 +28,10 @@ module.exports = withClickOutside(React.createClass({
       this.props.onNewSiteCreated()
       this.setState(this.getInitialState())
     })
-    .catch(console.log.bind(console))
+    .catch(e => {
+      console.log(e.stack)
+      this.setState({waiting: false, error: 'failed, please try again.'})
+    })
   },
 
   render () {
@@ -40,7 +44,7 @@ module.exports = withClickOutside(React.createClass({
             h('input.input', {onChange: this.write, value: this.state.name}),
             h('button.button.is-primary', {
               className: this.state.waiting ? 'is-loading' : ''
-            }, 'add')
+            }, this.state.error ? this.state.error : 'add')
           ])
         ])
         : h('i.fa.fa-plus')
