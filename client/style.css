@@ -2,8 +2,12 @@
   margin-top: 15px;
 }
 
-.card {
-  margin: 0 5px;
+.card { margin: 0 5px; }
+.card .title {
+  height: 1em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .newsite:hover { color: #999999; }
