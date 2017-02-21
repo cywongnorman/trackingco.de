@@ -10,6 +10,16 @@
   white-space: nowrap;
 }
 
+.card:active { height: 279.608px; }
+.card:active .recharts-responsive-container {
+  display: none;
+}
+
+.card.empty {
+  border: 24px #bbb dotted;
+  height: 279.608px;
+}
+
 .newsite:hover { color: #999999; }
 .newsite .card-content {
   text-align: center;

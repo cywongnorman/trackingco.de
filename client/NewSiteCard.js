@@ -14,16 +14,14 @@ module.exports = withClickOutside(React.createClass({
     }
   },
 
-  q: `
-    ($name: String!) {
-      createSite(name: $name) {
-        code
-      }
-    }
-  `,
-
   mutate () {
-    graphql.mutate(this.q, {name: this.state.name})
+    graphql.mutate(`
+      ($name: String!) {
+        createSite(name: $name) {
+          code
+        }
+      }
+    `, {name: this.state.name})
     .then(r => {
       this.props.onNewSiteCreated()
       this.setState(this.getInitialState())

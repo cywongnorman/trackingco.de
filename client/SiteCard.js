@@ -1,10 +1,12 @@
 const React = require('react')
 const h = require('react-hyperscript')
 const R = require('recharts')
+const DragSource = require('react-dnd').DragSource
+const DropTarget = require('react-dnd').DropTarget
 
 const graphql = require('./graphql')
 
-module.exports = React.createClass({
+const SiteCard = React.createClass({
   getInitialState () {
     return {
       site: {}
@@ -36,33 +38,69 @@ module.exports = React.createClass({
   },
 
   componentWillReceiveProps (nextProps) {
-    if (nextProps.code !== this.props.code) this.setState({code: nextProps.code}, this.query)
+    if (nextProps.code !== this.props.code) this.query()
   },
 
   render () {
-    return h('.card', {id: this.props.code}, [
-      h('.card-content', [
-        h('h4.title.is-4', this.state.site.name),
-        h('h6.subtitle.is-6', this.state.site.code)
-      ]),
-      h('.card-image', [
-        h('figure.image', [
-          h(R.ResponsiveContainer, {height: 200, width: '100%'}, [
-            h(R.ComposedChart, {data: this.state.site.days}, [
-              h(R.Bar, {
-                dataKey: 's',
-                fill: '#8884d8',
-                isAnimationActive: false
-              }),
-              h(R.Line, {
-                dataKey: 'v',
-                stroke: '#82ca9d',
-                isAnimationActive: false
-              })
+    return this.props.connectDragSource(this.props.connectDropTarget(
+      this.props.isDragging
+      ? h('.card.empty', '　')
+      : h('.card', {id: this.props.code}, [
+        h('.card-content', [
+          h('h4.title.is-4', this.state.site.name),
+          h('h6.subtitle.is-6', this.state.site.code)
+        ]),
+        h('.card-image', [
+          h('figure.image', [
+            h(R.ResponsiveContainer, {height: 200, width: '100%'}, [
+              h(R.ComposedChart, {data: this.state.site.days}, [
+                h(R.Bar, {
+                  dataKey: 's',
+                  fill: '#8884d8',
+                  isAnimationActive: false
+                }),
+                h(R.Line, {
+                  dataKey: 'v',
+                  stroke: '#82ca9d',
+                  isAnimationActive: false
+                })
+              ])
             ])
           ])
         ])
       ])
-    ])
+    ))
   }
 })
+
+module.exports = DropTarget('site', {
+  hover: function (props, monitor, component) {
+    let dragIndex = monitor.getItem().index
+    let hoverIndex = props.index
+
+    // don't replace items with themselves
+    if (dragIndex === hoverIndex) return
+
+    props.moveSite(dragIndex, hoverIndex)
+
+    // hack (from https://github.com/react-dnd/react-dnd/blob/5442d317f600d9760018f722c2968f6df0c2375c/examples/04%20Sortable/Simple/Card.js#L62-L66):
+    monitor.getItem().index = hoverIndex
+  },
+
+  drop: function (props, monitor, component) {
+    props.saveSiteOrder()
+  }
+}, function collect (connect) {
+  return {
+    connectDropTarget: connect.dropTarget()
+  }
+})(DragSource('site', {
+  beginDrag: function (props) {
+    return {code: props.code, index: props.index}
+  }
+}, function collect (connect, monitor) {
+  return {
+    connectDragSource: connect.dragSource(),
+    isDragging: monitor.isDragging()
+  }
+})(SiteCard))

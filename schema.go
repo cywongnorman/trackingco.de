@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sort"
+	"strings"
 
 	"github.com/fjl/go-couchdb"
 	"github.com/graphql-go/graphql"
@@ -325,11 +326,24 @@ var rootMutation = graphql.ObjectConfig{
 			Args: graphql.FieldConfigArgument{
 				"order": &graphql.ArgumentConfig{
 					Description: "an array of all the sites codes in the desired order",
-					Type:        graphql.String,
+					Type:        graphql.NewList(graphql.String),
 				},
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				return nil, nil
+				user := p.Context.Value("loggeduser").(int)
+				icodes := p.Args["order"].([]interface{})
+				codes := make([]string, len(icodes))
+				for i, icode := range icodes {
+					codes[i] = icode.(string)
+				}
+				order := strings.Join(codes, "@^~^@")
+				err = pg.Exec(
+					`UPDATE users SET sites_order = string_to_array(?, '@^~^@') WHERE id = ?`,
+					order, user)
+				if err != nil {
+					return nil, err
+				}
+				return Result{Ok: true}, nil
 			},
 		},
 	},
