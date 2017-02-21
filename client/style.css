@@ -4,7 +4,11 @@ html, body {
 }
 
 #main {
-  margin: 12px 0 0 12px;
+  margin: 0 0 0 12px;
+}
+
+nav.nav {
+  background-color: transparent;
 }
 
 .card {

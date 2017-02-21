@@ -1,9 +1,9 @@
 const React = require('react')
 const render = require('react-dom').render
 
-const Dashboard = require('./Dashboard')
+const Main = require('./Main')
 
 render(
-  React.createElement(Dashboard),
+  React.createElement(Main),
   document.getElementById('main')
 )
