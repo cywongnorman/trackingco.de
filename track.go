@@ -48,7 +48,11 @@ func track(c *iris.Context) {
 		c.SetStatusCode(400)
 		return
 	}
+
 	page := strings.TrimRight(upage.Path, "/")
+	if page == "" {
+		page = "/"
+	}
 	if upage.RawQuery != "" {
 		page = page + "?" + upage.RawQuery
 	}
