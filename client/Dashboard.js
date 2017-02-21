@@ -42,7 +42,7 @@ const Dashboard = React.createClass({
   render () {
     return (
       h('.columns.is-multiline.is-mobile', this.state.me.sites.map((site, i) =>
-        h('.column.is-one-quarter-desktop.is-one-third-tablet.is-half-mobile', {
+        h('.column.is-2-widescreen.is-3-desktop.is-4-tablet.is-6-mobile', {
           key: site.code
         }, [
           h(SiteCard, {
@@ -53,7 +53,7 @@ const Dashboard = React.createClass({
           })
         ])
       ).concat(
-        h('.column.is-one-quarter-desktop.is-one-third-tablet.is-half-mobile', {
+        h('.column.is-2-widescreen.is-3-desktop.is-4-tablet.is-6-mobile', {
           key: '_new'
         }, [
           h(NewSiteCard, {onNewSiteCreated: this.query})
