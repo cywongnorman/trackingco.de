@@ -11,32 +11,45 @@ nav.nav {
   background-color: transparent;
 }
 
-.card {
+.card.site {
   margin: 0 5px;
   height: 279.608px;
 }
-.card .title {
+.card.site .title,
+.card.site .subtitle {
   height: 1em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.card:active { height: 279.608px; }
-.card:active .recharts-responsive-container {
+.card.site:active { height: 279.608px; }
+.card.site:active .recharts-responsive-container {
   display: none;
 }
 
 .card.empty { border: 24px #bbb dotted; }
 
-.newsite:hover { color: #999999; }
-.newsite .card-content {
+.card.newsite:hover { color: #999999; }
+.card.newsite .card-content {
   text-align: center;
   cursor: pointer;
 }
-.newsite i.fa {
+.card.newsite i.fa {
   font-size: 7em;
   display: inline-block;
-  margin: 60px 0;
+  margin: 30px 0;
 }
-.newsite button { margin-top: 5px; }
+.card.newsite button { margin-top: 5px; }
+
+.card.detail-chart { margin: 12px; }
+.card.detail-chart .recharts-wrapper { margin-left: 21px; }
+.card.detail-table { margin: 12px; }
+
+.custom-tooltip {
+  padding: 12px;
+  background: #fff;
+  font-size: 1.3em;
+}
+.custom-tooltip .recharts-tooltip-label { text-align: center; margin-bottom: 4px; }
+.custom-tooltip .recharts-tooltip-item-list { text-align: right; }

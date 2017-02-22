@@ -3,6 +3,7 @@ const h = require('react-hyperscript')
 const R = require('recharts')
 const DragSource = require('react-dnd').DragSource
 const DropTarget = require('react-dnd').DropTarget
+const Link = require('react-router-dom').Link
 
 const graphql = require('./graphql')
 
@@ -44,11 +45,13 @@ const SiteCard = React.createClass({
   render () {
     return this.props.connectDragSource(this.props.connectDropTarget(
       this.props.isDragging
-      ? h('.card.empty', '　')
-      : h('.card', {id: this.props.code}, [
+      ? h('.card.site.empty', '　')
+      : h('.card.site', {id: this.props.code}, [
         h('.card-content', [
           h('h4.title.is-4', this.state.site.name),
-          h('h6.subtitle.is-6', this.state.site.code)
+          h('h6.subtitle.is-6', [
+            h(Link, {to: `/sites/${this.state.site.code}`}, this.state.site.code)
+          ])
         ]),
         h('.card-image', [
           h('figure.image', [
@@ -62,6 +65,7 @@ const SiteCard = React.createClass({
                 h(R.Line, {
                   dataKey: 'v',
                   stroke: '#82ca9d',
+                  dot: false,
                   isAnimationActive: false
                 })
               ])
