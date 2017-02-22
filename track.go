@@ -29,11 +29,17 @@ func track(c *iris.Context) {
 		rds.Expire(key(SESSIONS), twodays)
 
 		// save referrer only on new sessions
-		uref, err := url.Parse(c.FormValue("r"))
-		if err == nil {
-			uref.Path = strings.TrimRight(uref.Path, "/") // strip ending slashes
-			rds.HIncrBy(key(REFERRERS), uref.String(), 1)
-			rds.Expire(key(REFERRERS), twodays)
+		r := c.FormValue("r")
+		if r != "" {
+			uref, err := url.Parse(r)
+			if err == nil {
+				uref.Path = strings.TrimRight(uref.Path, "/") // strip ending slashes
+				if uref.Path == "" {
+					uref.Path = "/"
+				}
+				rds.HIncrBy(key(REFERRERS), uref.String(), 1)
+				rds.Expire(key(REFERRERS), twodays)
+			}
 		}
 	}
 
