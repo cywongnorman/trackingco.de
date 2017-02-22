@@ -2,6 +2,7 @@ const React = require('react')
 const h = require('react-hyperscript')
 const R = require('recharts')
 const months = require('months')
+const randomWord = require('porreta')
 
 const graphql = require('./graphql')
 
@@ -10,7 +11,10 @@ module.exports = React.createClass({
     return {
       site: {},
       pagesOpen: false,
-      referrersOpen: false
+      referrersOpen: false,
+      dataMax: 100,
+      referrers: [],
+      pages: []
     }
   },
 
@@ -32,7 +36,14 @@ module.exports = React.createClass({
 
   query () {
     graphql.query(this.q, {code: this.props.match.params.code})
-    .then(r => this.setState(r))
+    .then(r => {
+      this.setState({
+        site: r.site,
+        dataMax: Math.max(...r.site.days.map(d => d.v)),
+        referrers: crunch(r.site.days, 'r'),
+        pages: crunch(r.site.days, 'p')
+      })
+    })
     .catch(console.log.bind(console))
   },
 
@@ -45,28 +56,70 @@ module.exports = React.createClass({
   },
 
   render () {
-    var referrers = []
-    var pages = []
-    var dataMax = 100
-    if (this.state.site.days) {
-      referrers = crunch(this.state.site.days, 'r')
-      pages = crunch(this.state.site.days, 'p')
-      dataMax = Math.max(...this.state.site.days.map(d => d.v)) || 10
+    let header = (
+      h('.content', [
+        h('h4.title.is-3', this.state.site.name),
+        h('h6.subtitle.is-6', this.state.site.code)
+      ])
+    )
+
+    if (this.state.dataMax === 0) {
+      // this site has no data for the specified period
+      return h('.container', [
+        header,
+        h('.card.trackingcode', [
+          h('.card-content', [
+            h('p', 'This site has no data yet. Have you installed the tracking code?'),
+            h('p', 'Just paste the following in any part of your site:'),
+            h('pre', [
+              h('code', `<script>(function(t,c){var v=t.createElement('img');v.src='https://t.trackingco.de/${randomWord()}.gif?r='+t.referrer+'&t='+c;t.body.appendChild(v);})(document,'${this.state.site.code}')</script>`)
+            ]),
+            h('p', [
+              'To bypass ad blockers that may be preventing some of your visitors from being tracked, you can use your own domain instead of ',
+              h('code', 't.trackingco.de'),
+              '. Just ',
+              h('code', 'CNAME'),
+              ' it to ',
+              h('code', 't.trackingco.de'),
+              " and that's it."
+            ]),
+            h('p', [
+              'Some ad blockers are also blocking based on the URL path. For example, ',
+              h('code', '/track.gif'),
+              ' or ',
+              h('code', '/t.gif'),
+              ' are already in many blocklists. But you can use any word ending in ',
+              h('code', '.git'),
+              ' ',
+              h('code', '.jpg'),
+              ' or ',
+              h('code', '.png'),
+              ' like ',
+              h('code', '/logo.png'),
+              ' or ',
+              h('code', '/header-image.jpg'),
+              '.'
+            ])
+          ])
+        ])
+      ])
     }
 
-    let pagesMore = pages.length > 12
+    let pagesMore = this.state.pages.length > 12
+    var pages = this.state.pages
     if (!this.state.pagesOpen) {
-      pages = pages.slice(0, 12)
+      pages = this.state.pages.slice(0, 12)
     }
-    let referrersMore = referrers.length > 12
+    let referrersMore = this.state.referrers.length > 12
+    var referrers = this.state.referrers
     if (!this.state.referrersOpen) {
-      referrers = referrers.slice(0, 12)
+      referrers = this.state.referrers.slice(0, 12)
     }
-    return h('div', [
+    return h('.container', [
+      header,
       h('.card.detail-chart', [
-        h('.card-content', [
-          h('h4.title.is-4', this.state.site.name),
-          h('h6.subtitle.is-6', this.state.site.code)
+        h('.card-header', [
+          h('p.card-header-title', 'Number of sessions and pageviews')
         ]),
         h('.card-image', [
           h('figure.image', [
@@ -75,7 +128,7 @@ module.exports = React.createClass({
                 h(R.XAxis, {dataKey: 'day', hide: true}),
                 h(R.YAxis, {
                   scale: 'linear',
-                  domain: [0, dataMax],
+                  domain: [0, this.state.dataMax],
                   orientation: 'right'
                 }),
                 h(R.Tooltip, {

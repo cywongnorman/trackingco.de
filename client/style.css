@@ -42,6 +42,8 @@ nav.nav {
 }
 .card.newsite button { margin-top: 5px; }
 
+.card.trackingcode code { white-space: pre-wrap; }
+
 .card.detail-chart { margin: 12px; }
 .card.detail-chart .recharts-wrapper { margin-left: 21px; }
 .card.detail-table { margin: 12px; }
