@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/kr/pretty"
 	"github.com/ogier/pflag"
 )
 
@@ -24,6 +23,7 @@ func daily() {
 	}
 
 	for _, site := range sites {
+		log.Print("-------------")
 		log.Print(" > site ", site.Code, " (", site.Name, "), from ", site.UserId, ":")
 		key := redisKeyFactory(site.Code, day)
 
@@ -55,7 +55,7 @@ func daily() {
 			}
 		}
 
-		pretty.Log(stats)
+		log.Print(stats)
 
 		// check for zero-stats (to save disk space we won't store these)
 		if stats.Sessions == 0 && stats.Pageviews == 0 && len(stats.Referrers) == 0 && len(stats.Pages) == 0 {
