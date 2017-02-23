@@ -17,18 +17,16 @@ const Dashboard = React.createClass({
     }
   },
 
-  q: `
-    query {
-      me {
-        sites {
-          code
+  query () {
+    graphql.query(`
+      query {
+        me {
+          sites {
+            code
+          }
         }
       }
-    }
-  `,
-
-  query () {
-    graphql.query(this.q)
+    `)
     .then(r => this.setState(r))
     .catch(console.log.bind(console))
   },
@@ -49,7 +47,8 @@ const Dashboard = React.createClass({
             code: site.code,
             index: i,
             moveSite: this.moveSite,
-            saveSiteOrder: this.saveSiteOrder
+            saveSiteOrder: this.saveSiteOrder,
+            iWasDeleted: this.removeSiteFromScreen.bind(this, site.code)
           })
         ])
       ).concat(
@@ -86,6 +85,13 @@ const Dashboard = React.createClass({
     })
     .catch(e => {
       console.log(e.stack)
+    })
+  },
+
+  removeSiteFromScreen (code) {
+    this.setState(st => {
+      st.me.sites = st.me.sites.filter(s => s.code !== code)
+      return st
     })
   }
 })

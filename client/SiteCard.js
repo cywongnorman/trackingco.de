@@ -10,26 +10,33 @@ const graphql = require('./graphql')
 const SiteCard = React.createClass({
   getInitialState () {
     return {
-      site: {}
+      site: {},
+      editing: false,
+      deleting: false,
+      editingName: ''
     }
   },
 
-  q: `
-    query siteOverview($code: String!) {
-      site(code: $code) {
-        name
-        code
-        days(last:7) {
-          day
-          s
-          v
-        }
+  sitef: graphql.createFragment(`
+    fragment on Site {
+      name
+      code
+      days(last:7) {
+        day
+        s
+        v
       }
     }
-  `,
+  `),
 
   query () {
-    graphql.query(this.q, {code: this.props.code})
+    graphql.query(`
+      query c($code: String!) {
+        site(code: $code) {
+          ...${this.sitef}
+        }
+      }
+    `, {code: this.props.code})
     .then(r => this.setState(r))
     .catch(console.log.bind(console))
   },
@@ -47,13 +54,24 @@ const SiteCard = React.createClass({
       this.props.isDragging
       ? h('.card.site.empty', '　')
       : h('.card.site', {id: this.props.code}, [
-        h('.card-content', [
-          h('h4.title.is-4', this.state.site.name),
-          h('h6.subtitle.is-6', [
-            h(Link, {to: `/sites/${this.state.site.code}`}, this.state.site.code)
+        h('.card-header', [
+          h('p.card-header-title', [
+            this.state.editing
+            ? h('span', {
+              contentEditable: true,
+              onInput: e => {
+                this.setState({editingName: e.target.innerHTML.trim()})
+              },
+              ref: el => { el && el.focus() },
+              dangerouslySetInnerHTML: {
+                __html: this.state.site.name
+              }
+            })
+            : h(Link, {to: `/sites/${this.state.site.code}`}, this.state.site.name)
           ])
         ]),
         h('.card-image', [
+          h('i.fa.fa-square-o.placeholder'),
           h('figure.image', [
             h(R.ResponsiveContainer, {height: 200, width: '100%'}, [
               h(R.ComposedChart, {data: this.state.site.days}, [
@@ -71,9 +89,77 @@ const SiteCard = React.createClass({
               ])
             ])
           ])
-        ])
+        ]),
+        h('.card-footer', this.state.deleting
+          ? [
+            h('a.card-footer-item.danger', {onClick: this.confirmDelete}, 'really delete?'),
+            h('a.card-footer-item', {onClick: this.cancelDelete}, 'cancel')
+          ]
+          : this.state.editing
+            ? [
+              h('a.card-footer-item.save', {onClick: this.confirmEdit}, 'save'),
+              h('a.card-footer-item', {onClick: this.cancelEdit}, 'cancel')
+            ]
+            : [
+              h(Link, {className: 'card-footer-item', to: `/sites/${this.props.code}`}, 'view'),
+              h('a.card-footer-item', {onClick: () => { this.setState({editing: true}) }}, 'edit'),
+              h('a.card-footer-item', {onClick: () => { this.setState({deleting: true}) }}, 'delete')
+            ]
+        )
       ])
     ))
+  },
+
+  confirmEdit () {
+    if (!this.state.editingName) {
+      this.setState({editing: false})
+      return
+    }
+
+    graphql.mutate(`
+      ($name: String!, $code: String!) {
+        renameSite(name: $name, code: $code) {
+          ...${this.sitef}
+        }
+      }
+    `, {name: this.state.editingName, code: this.state.site.code})
+    .then(r => {
+      this.setState({editing: false, site: r.renameSite})
+    })
+    .catch(e => {
+      console.log(e.stack)
+      this.setState({error: 'failed, please try again.'})
+    })
+  },
+
+  cancelEdit () {
+    this.setState({editing: false})
+  },
+
+  confirmDelete () {
+    this.setState({deleting: false})
+    graphql.mutate(`
+      ($code: String!) {
+        deleteSite(code: $code) {
+          ok
+        }
+      }
+    `, {code: this.state.site.code})
+    .then(r => {
+      if (r.deleteSite.ok) {
+        this.props.iWasDeleted()
+        return
+      }
+      this.setState({deleting: false})
+    })
+    .catch(e => {
+      console.log(e.stack)
+      this.setState({error: 'failed, please try again.'})
+    })
+  },
+
+  cancelDelete () {
+    this.setState({deleting: false})
   }
 })
 

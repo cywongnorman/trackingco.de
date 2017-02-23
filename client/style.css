@@ -1,34 +1,45 @@
 html, body {
   min-height: 100%;
-  background-color: antiquewhite;
+  background-color: #cbe6c2;
 }
 
 #main {
   margin: 0 0 0 12px;
 }
 
+a { color: #792a26; }
+
 nav.nav {
   background-color: transparent;
 }
 
-.card.site {
-  margin: 0 5px;
-  height: 279.608px;
-}
-.card.site .title,
-.card.site .subtitle {
-  height: 1em;
+.card.empty { border: 24px #bbb dotted; height: 285px }
+
+.card.site { margin: 0 5px; }
+.card.site .card-header-title {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-.card.site:active { height: 279.608px; }
-.card.site:active .recharts-responsive-container {
-  display: none;
+.card.site [contenteditable] { min-width: 90px }
+.card.site [contenteditable]:focus {
+  outline: none;
+  box-shadow: none;
+  -webkit-box-shadow: none;
+  border-color: inherit;
 }
 
-.card.empty { border: 24px #bbb dotted; }
+.card.site .fa.placeholder { display: none }
+.card.site:active .recharts-responsive-container { display: none; }
+.card.site:active .fa.placeholder {
+  display: block;
+  margin: 50px;
+  font-size: 100px;
+  color: #999999;
+}
+
+.card.site .card-footer-item.danger { background-color: #ff3860; color: #fff }
+.card.site .card-footer-item.save { background-color: #3273dc; color: #fff }
 
 .card.newsite:hover { color: #999999; }
 .card.newsite .card-content {
@@ -47,6 +58,18 @@ nav.nav {
 .card.detail-chart { margin: 12px; }
 .card.detail-chart .recharts-wrapper { margin-left: 21px; }
 .card.detail-table { margin: 12px; }
+.card.detail-table td:first-child {
+  max-width: 120px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.card.detail-table tr:hover td:first-child {
+  white-space: pre-line;
+  text-overflow: initial;
+  word-break: break-all;
+}
+.card.detail-table td:nth-child(2) { text-align: right; }
 
 .custom-tooltip {
   padding: 12px;

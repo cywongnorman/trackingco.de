@@ -311,13 +311,34 @@ var rootMutation = graphql.ObjectConfig{
 				},
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				err = pg.Where(
-					"code = ? AND user_id = ?",
-					p.Args["code"].(string), p.Context.Value("loggeduser").(int)).
-					Delete(Site{})
+				user := p.Context.Value("loggeduser").(int)
+				code := p.Args["code"].(string)
+
+				tx := pg.Begin()
+
+				err = tx.Exec(
+					`DELETE FROM sites WHERE code = ? AND user_id = ?`,
+					code, user,
+				)
 				if err != nil {
-					return nil, err
+					tx.Rollback()
+					return Result{false}, err
 				}
+
+				err = tx.Exec(
+					`UPDATE users SET sites_order = array_remove(sites_order, ?) WHERE id = ?`,
+					code, user,
+				)
+				if err != nil {
+					tx.Rollback()
+					return Result{false}, err
+				}
+
+				if err = tx.Commit(); err != nil {
+					tx.Rollback()
+					return Result{false}, err
+				}
+
 				return Result{true}, nil
 			},
 		},
@@ -341,9 +362,9 @@ var rootMutation = graphql.ObjectConfig{
 					`UPDATE users SET sites_order = string_to_array(?, '@^~^@') WHERE id = ?`,
 					order, user)
 				if err != nil {
-					return nil, err
+					return Result{false}, err
 				}
-				return Result{Ok: true}, nil
+				return Result{true}, nil
 			},
 		},
 	},
