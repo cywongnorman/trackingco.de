@@ -4,6 +4,9 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
+	"path/filepath"
+	"runtime"
 
 	"github.com/fjl/go-couchdb"
 	"github.com/galeone/igor"
@@ -62,11 +65,19 @@ func main() {
 	hso = hashids.NewWithData(hd)
 
 	// track.lua
-	if btracklua, err := ioutil.ReadFile("./track.lua"); err == nil {
-		tracklua = string(btracklua)
-	} else {
-		log.Fatal("failed to read track.lua: ", err)
+	filename := "./track.lua"
+	// try the current directory
+	btracklua, err := ioutil.ReadFile(filename)
+	if err != nil {
+		// try some magic (based on the path of the source main.go)
+		_, this, _, _ := runtime.Caller(0)
+		here := path.Dir(this)
+		btracklua, err = ioutil.ReadFile(filepath.Join(here, filename))
+		if err != nil {
+			log.Fatal("failed to read track.lua: ", err)
+		}
 	}
+	tracklua = string(btracklua)
 
 	// run routines or start the server
 	if len(os.Args) == 1 {
