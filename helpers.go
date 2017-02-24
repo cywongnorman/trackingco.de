@@ -8,12 +8,6 @@ import (
 )
 
 const DATEFORMAT = "20060102"
-const (
-	SESSIONS  = "s"
-	PAGEVIEWS = "v"
-	REFERRERS = "r"
-	PAGES     = "p"
-)
 
 func presentDay() time.Time {
 	now := time.Now().UTC()
@@ -37,7 +31,11 @@ func makeCodeForUser(userId int) string {
 	hd.MinLength = 5
 	hd.Alphabet = "abcdefghijklmnopqrstuvwxyz1234567890"
 	h := hashids.NewWithData(hd)
-	rand.Seed(time.Now().UnixNano())
-	r, _ := h.Encode([]int{userId, rand.Intn(9999)})
+	r, _ := h.Encode([]int{userId, randomNumber(9999)})
 	return r
+}
+
+func randomNumber(r int) int {
+	rand.Seed(time.Now().UnixNano())
+	return rand.Intn(r)
 }

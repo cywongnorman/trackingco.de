@@ -60,22 +60,37 @@ var compendiumType = graphql.NewObject(
 				Type:        graphql.String,
 				Description: "the date in format YYYYMMDD.",
 			},
-			SESSIONS: &graphql.Field{
-				Type:        graphql.Int,
-				Description: "total number of sessions.",
-			},
-			PAGEVIEWS: &graphql.Field{
+			"v": &graphql.Field{
 				Type:        graphql.Int,
 				Description: "total number of pageviews.",
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					i := 0
+					for _, count := range p.Source.(Compendium).Pages {
+						i += count
+					}
+					return i, nil
+				},
 			},
-			REFERRERS: &graphql.Field{
+			"s": &graphql.Field{
+				Type:        graphql.Int,
+				Description: "total number of sessions.",
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					i := 0
+					for _, pointmap := range p.Source.(Compendium).Sessions {
+						i += (len(pointmap) - 1) / 2
+					}
+					return i, nil
+				},
+			},
+			"r": &graphql.Field{
 				Type:        graphql.NewList(entryType),
 				Description: "a list of entries of referrers, sorted by the number of occurrences.",
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-					d := p.Source.(Compendium).Referrers
+					d := p.Source.(Compendium).Sessions
 					entries := make([]Entry, len(d))
 					i := 0
-					for addr, count := range d {
+					for addr, pointmap := range d {
+						count := (len(pointmap) - 1) / 2
 						entries[i] = Entry{addr, count}
 						i++
 					}
@@ -83,7 +98,7 @@ var compendiumType = graphql.NewObject(
 					return entries, nil
 				},
 			},
-			PAGES: &graphql.Field{
+			"p": &graphql.Field{
 				Type:        graphql.NewList(entryType),
 				Description: "a list of entries of viewed pages, sorted by the number of occurrences.",
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {

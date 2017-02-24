@@ -28,26 +28,18 @@ func daily() {
 		key := redisKeyFactory(site.Code, day)
 
 		stats := Compendium{
-			Id:        makeBaseKey(site.Code, day),
-			Referrers: make(map[string]int),
-			Pages:     make(map[string]int),
+			Id:       makeBaseKey(site.Code, day),
+			Sessions: make(map[string]string),
+			Pages:    make(map[string]int),
 		}
 
 		// grab stats from redis
-		if val, err := rds.Get(key(SESSIONS)).Int64(); err == nil {
-			stats.Sessions = int(val)
-		}
-		if val, err := rds.Get(key(PAGEVIEWS)).Int64(); err == nil {
-			stats.Pageviews = int(val)
-		}
-		if val, err := rds.HGetAll(key(REFERRERS)).Result(); err == nil {
+		if val, err := rds.HGetAll(key("s")).Result(); err == nil {
 			for k, v := range val {
-				if count, err := strconv.Atoi(v); err == nil {
-					stats.Referrers[k] = count
-				}
+				stats.Sessions[k] = v
 			}
 		}
-		if val, err := rds.HGetAll(key(PAGES)).Result(); err == nil {
+		if val, err := rds.HGetAll(key("p")).Result(); err == nil {
 			for k, v := range val {
 				if count, err := strconv.Atoi(v); err == nil {
 					stats.Pages[k] = count
@@ -58,7 +50,7 @@ func daily() {
 		log.Print(stats)
 
 		// check for zero-stats (to save disk space we won't store these)
-		if stats.Sessions == 0 && stats.Pageviews == 0 && len(stats.Referrers) == 0 && len(stats.Pages) == 0 {
+		if len(stats.Sessions) == 0 && len(stats.Pages) == 0 {
 			log.Print("   : skipped saving because everything is zero.")
 			continue
 		}

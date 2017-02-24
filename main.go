@@ -1,30 +1,35 @@
 package main
 
 import (
+	"io/ioutil"
 	"log"
 	"os"
 
 	"github.com/fjl/go-couchdb"
 	"github.com/galeone/igor"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/speps/go-hashids"
 	"gopkg.in/redis.v5"
 )
 
 type Settings struct {
-	Port              string `envconfig:"PORT"`
-	CouchURL          string `envconfig:"COUCH_URL"`
-	CouchDatabaseName string `envconfig:"COUCH_DATABASE"`
-	RedisAddr         string `envconfig:"REDIS_ADDR"`
-	RedisPassword     string `envconfig:"REDIS_PASSWORD"`
-	PostgresURL       string `envconfig:"DATABASE_URL"`
-	LoggedAs          int    `envconfig:"LOGGED_AS"`
+	Port                    string `envconfig:"PORT"`
+	CouchURL                string `envconfig:"COUCH_URL"`
+	CouchDatabaseName       string `envconfig:"COUCH_DATABASE"`
+	RedisAddr               string `envconfig:"REDIS_ADDR"`
+	RedisPassword           string `envconfig:"REDIS_PASSWORD"`
+	PostgresURL             string `envconfig:"DATABASE_URL"`
+	SessionOffsetHashidSalt string `envconfig:"SESSION_OFFSET_HASHID_SALT"`
+	LoggedAs                int    `envconfig:"LOGGED_AS"`
 }
 
 var err error
 var s Settings
 var pg *igor.Database
+var hso *hashids.HashID
 var rds *redis.Client
 var couch *couchdb.DB
+var tracklua string
 
 func main() {
 	err = envconfig.Process("", &s)
@@ -47,9 +52,21 @@ func main() {
 	// couchdb
 	couchS, err := couchdb.NewClient(s.CouchURL, nil)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("failed to created couchdb client: ", err)
 	}
 	couch = couchS.DB(s.CouchDatabaseName)
+
+	// hashids for session offset
+	hd := hashids.NewData()
+	hd.Salt = s.SessionOffsetHashidSalt
+	hso = hashids.NewWithData(hd)
+
+	// track.lua
+	if btracklua, err := ioutil.ReadFile("./track.lua"); err == nil {
+		tracklua = string(btracklua)
+	} else {
+		log.Fatal("failed to read track.lua: ", err)
+	}
 
 	// run routines or start the server
 	if len(os.Args) == 1 {

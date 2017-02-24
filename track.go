@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -10,51 +11,26 @@ import (
 )
 
 func track(c *iris.Context) {
-	code := c.FormValue("t")
-	log.Print(code)
+	// tracking code
+	code := c.FormValue("c")
 	if code == "" {
 		c.SetStatusCode(400)
 		return
 	}
 
-	// store data to redis
-	twodays := time.Hour * 48
-	key := redisKeyFactory(code, time.Now().Format(DATEFORMAT))
-
-	if c.GetCookie("_tcs") == "" {
-		// new session, count it
-		c.SetCookieKV("_tcs", "1")
-
-		rds.Incr(key(SESSIONS))
-		rds.Expire(key(SESSIONS), twodays)
-
-		// save referrer only on new sessions
-		r := c.FormValue("r")
-		if r != "" {
-			uref, err := url.Parse(r)
-			if err == nil {
-				uref.Path = strings.TrimRight(uref.Path, "/") // strip ending slashes
-				if uref.Path == "" {
-					uref.Path = "/"
-				}
-				rds.HIncrBy(key(REFERRERS), uref.String(), 1)
-				rds.Expire(key(REFERRERS), twodays)
-			}
-		}
+	// points
+	points, err := strconv.Atoi(c.FormValue("p"))
+	if err != nil || points < 1 {
+		points = 1
 	}
 
-	// count a pageview
-	rds.Incr(key(PAGEVIEWS))
-	rds.Expire(key(PAGEVIEWS), twodays)
-
-	// save visited page
+	// page
 	upage, err := url.Parse(c.RequestHeader("Referer"))
 	if err != nil {
 		log.Print("invalid Referer: ", c.RequestHeader("Referer"), " - ", err)
 		c.SetStatusCode(400)
 		return
 	}
-
 	page := strings.TrimRight(upage.Path, "/")
 	if page == "" {
 		page = "/"
@@ -62,10 +38,78 @@ func track(c *iris.Context) {
 	if upage.RawQuery != "" {
 		page = page + "?" + upage.RawQuery
 	}
-	rds.HIncrBy(key(PAGES), page, 1)
-	rds.Expire(key(PAGES), twodays)
 
-	log.Print("tracked " + code)
+	// referrer
+	referrer := c.FormValue("r") // may be "". means <direct>.
+	if referrer != "" {
+		uref, err := url.Parse(referrer)
+		if err == nil {
+			uref.Path = strings.TrimRight(uref.Path, "/") // strip ending slashes
+			if uref.Path == "" {
+				uref.Path = "/"
+			}
+			referrer = uref.String()
+		}
+	}
+
+	// session (a hashid that translates to a number, which is the offset for the array of points)
+	var offset int
+	var sessioncode int
+	if hi := c.GetCookie("_tcs"); hi != "" {
+		// existing session
+		if offsetarr, err := hso.DecodeWithError(hi); err != nil || len(offsetarr) != 2 {
+			log.Print("error decoding session hashid ", hi, ": ", err, " (treating as new session)")
+			offset = -1
+		} else {
+			// _valid_ existing session
+			offset = offsetarr[0]
+			// this session code will be used to fetch the referrer for this session
+			sessioncode = offsetarr[1]
+			referrer = "@"
+		}
+	} else {
+		// new session
+		offset = -1
+		// this session code will be used to store the referrer for this session
+		sessioncode = randomNumber(999999999)
+	}
+
+	// store data to redis
+	twodays := int(time.Hour * 48)
+	key := redisKeyFactory(code, time.Now().Format(DATEFORMAT))
+
+	result := rds.Eval(
+		tracklua,
+		[]string{
+			key("p"),    // KEYS[1]
+			key("s"),    // KEYS[2]
+			key("rfsc"), // KEYS[3]
+		},
+		page,        // ARGV[1]
+		referrer,    // ARGV[2]
+		offset,      // ARGV[3]
+		twodays,     // ARGV[4]
+		sessioncode, // ARGV[5]
+		points,      // ARGV[6]
+	)
+	if val, err := result.Result(); err != nil {
+		log.Print("error executing track.lua: ", err)
+		c.SetStatusCode(400)
+		return
+	} else {
+		offset = val.(int)
+	}
+
+	// send session to user
+	hi, err := hso.Encode([]int{offset, sessioncode})
+	if err != nil {
+		log.Print("error encoding hashid for session offset ", offset, ": ", err)
+		c.SetStatusCode(400)
+		return
+	}
+	c.SetCookieKV("_tcs", hi)
+
+	log.Print("tracked ", code, " ", referrer, " ", offset, " ", page)
 
 	// no cache
 	c.SetHeader("Cache-Control", "no-cache, no-store, must-revalidate")

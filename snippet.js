@@ -1,1 +1,9 @@
-(function(t,c){var v=t.createElement('img');v.src='http://cantillon.alhur.es:6546/t.gif?r='+t.referrer+'&t='+c;t.body.appendChild(v);})(document,'code')
+(function (d, c) {
+  tc = function (p) {
+    p = p || 1
+    var v = d.createElement('img')
+    v.src = 'https://t.trackingco.de/header.gif?r=' + d.referrer + '&c=' + c + '&p=' + p
+    d.head.appendChild(v)
+  }
+  tc()
+})(document, 'code')

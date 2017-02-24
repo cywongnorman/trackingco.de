@@ -3,13 +3,17 @@ package main
 import "strings"
 
 type Compendium struct {
-	Id        string         `json:"_id,omitempty"`
-	Rev       string         `json:"_rev,omitempty"`
-	Day       string         `json:"day,omitempty"`
-	Sessions  int            `json:"s"`
-	Pageviews int            `json:"v"`
-	Referrers map[string]int `json:"r"`
-	Pages     map[string]int `json:"p"`
+	Id  string `json:"_id,omitempty"`
+	Rev string `json:"_rev,omitempty"`
+	Day string `json:"day,omitempty"`
+	// a map of referrers (with special DIRECT) to strings like "~1201020302050422"
+	// representing the numner of points each visitor scored: [12, 1, 2, 3, 2, 5, 4, 22]
+	// each pageview is 1 point. users can track points using the JS API.
+	// the raw number of sessions is given by the sum of len(split(eachvalue, ',')).
+	Sessions map[string]string `json:"s"`
+	// a map of all pages viewed with the number of views in each one.
+	// the raw number of pageviews is given by the sum of eachvalue.
+	Pages map[string]int `json:"p"`
 }
 
 type Entry struct {
