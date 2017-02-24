@@ -42,6 +42,13 @@ var entryType = graphql.NewObject(
 			"a": &graphql.Field{
 				Type:        graphql.String,
 				Description: "the web address.",
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					addr := p.Source.(Entry).Address
+					if addr == "" {
+						return "<direct>", nil
+					}
+					return addr, nil
+				},
 			},
 			"c": &graphql.Field{
 				Type:        graphql.Int,
