@@ -2,8 +2,8 @@ const React = require('react')
 const h = require('react-hyperscript')
 const R = require('recharts')
 const months = require('months')
-const randomWord = require('porreta')
 
+const snippet = require('./snippet')
 const graphql = require('./graphql')
 
 const names = {
@@ -233,7 +233,7 @@ const NoData = function (props) {
         h('p', 'This site has no data yet. Have you installed the tracking code?'),
         h('p', 'Just paste the following in any part of your site:'),
         h('pre', [
-          h('code', `<script>!function(e,r){t=function(t){var n=e.createElement("img");n.src="https://t.trackingco.de/${randomWord()}.gif?r="+e.referrer+"&c="+r+"&p="+t,e.body.appendChild(n)},t()}(document,"${props.site.code}");</script>`)
+          h('code', `<script>;${snippet(props.site.code)};</script>`)
         ]),
         h('p', [
           'To bypass ad blockers that may be preventing some of your visitors from being tracked, you can use your own domain instead of ',
