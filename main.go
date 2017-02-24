@@ -1,6 +1,12 @@
 package main
 
 import (
+	"bytes"
+	"image"
+	"image/color"
+	"image/gif"
+	"image/jpeg"
+	"image/png"
 	"io/ioutil"
 	"log"
 	"os"
@@ -33,6 +39,9 @@ var hso *hashids.HashID
 var rds *redis.Client
 var couch *couchdb.DB
 var tracklua string
+var gifimage *bytes.Buffer
+var pngimage *bytes.Buffer
+var jpgimage *bytes.Buffer
 
 func main() {
 	err = envconfig.Process("", &s)
@@ -78,6 +87,22 @@ func main() {
 		}
 	}
 	tracklua = string(btracklua)
+
+	// make images to serve later
+	gifimage = new(bytes.Buffer)
+	jpgimage = new(bytes.Buffer)
+	pngimage = new(bytes.Buffer)
+	img := image.NewRGBA(image.Rect(0, 0, 1, 1))
+	img.Set(0, 0, color.RGBA{255, 0, 0, 255})
+	if err = gif.Encode(gifimage, img, nil); err != nil {
+		log.Fatal("failed to encode gif: ", err)
+	}
+	if err = png.Encode(pngimage, img); err != nil {
+		log.Fatal("failed to encode png: ", err)
+	}
+	if err = jpeg.Encode(jpgimage, img, nil); err != nil {
+		log.Fatal("failed to encode jpg: ", err)
+	}
 
 	// run routines or start the server
 	if len(os.Args) == 1 {

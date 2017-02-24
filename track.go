@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"log"
 	"net/url"
 	"strconv"
@@ -11,10 +12,12 @@ import (
 )
 
 func track(c *iris.Context) {
+	defer sendImage(c)
+
 	// tracking code
 	code := c.FormValue("c")
 	if code == "" {
-		c.SetStatusCode(400)
+		log.Print("didn't send tracking code.")
 		return
 	}
 
@@ -28,7 +31,6 @@ func track(c *iris.Context) {
 	upage, err := url.Parse(c.RequestHeader("Referer"))
 	if err != nil {
 		log.Print("invalid Referer: ", c.RequestHeader("Referer"), " - ", err)
-		c.SetStatusCode(400)
 		return
 	}
 	page := strings.TrimRight(upage.Path, "/")
@@ -92,30 +94,52 @@ func track(c *iris.Context) {
 		sessioncode, // ARGV[5]
 		points,      // ARGV[6]
 	)
+
 	if val, err := result.Result(); err != nil {
 		log.Print("error executing track.lua: ", err)
-		c.SetStatusCode(400)
 		return
 	} else {
-		offset = val.(int)
+		offset = int(val.(int64))
 	}
 
 	// send session to user
 	hi, err := hso.Encode([]int{offset, sessioncode})
 	if err != nil {
 		log.Print("error encoding hashid for session offset ", offset, ": ", err)
-		c.SetStatusCode(400)
 		return
 	}
 	c.SetCookieKV("_tcs", hi)
 
 	log.Print("tracked ", code, " ", referrer, " ", offset, " ", page)
+}
 
+func sendImage(c *iris.Context) {
 	// no cache
 	c.SetHeader("Cache-Control", "no-cache, no-store, must-revalidate")
 	c.SetHeader("Pragma", "no-cache")
 	c.SetHeader("Expires", "0")
 
-	c.SetContentType("image/gif")
-	c.SetStatusCode(200)
+	var buffer *bytes.Buffer
+
+	switch c.Param("extension") {
+	case "gif":
+		buffer = gifimage
+		c.SetContentType("image/gif")
+		break
+	case "jpeg", "jpg":
+		buffer = jpgimage
+		c.SetContentType("image/jpeg")
+		break
+	case "png":
+		buffer = pngimage
+		c.SetContentType("image/png")
+		break
+	}
+
+	c.SetHeader("Content-Length", strconv.Itoa(len(buffer.Bytes())))
+
+	if _, err = c.ResponseWriter.Write(buffer.Bytes()); err != nil {
+		log.Print("failed to serve image: ", err)
+		c.HTML(500, "<p>Erro!</p>")
+	}
 }
