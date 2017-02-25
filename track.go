@@ -73,12 +73,13 @@ func track(c *iris.Context) {
 		offset = offsetarr[0]
 		// this session code will be used to fetch the referrer for this session
 		sessioncode = offsetarr[1]
-		referrer = "@"
+		referrer = rds.Get("rs:" + strconv.Itoa(sessioncode)).Val()
 	} else {
 		// new session
 		offset = -1
 		// this session code will be used to store the referrer for this session
 		sessioncode = randomNumber(999999999)
+		rds.Set("rs:"+strconv.Itoa(sessioncode), referrer, time.Hour*5)
 	}
 
 	// store data to redis
@@ -88,16 +89,14 @@ func track(c *iris.Context) {
 	result := rds.Eval(
 		tracklua,
 		[]string{
-			key("p"),    // KEYS[1]
-			key("s"),    // KEYS[2]
-			key("rfsc"), // KEYS[3]
+			key("p"), // KEYS[1]
+			key("s"), // KEYS[2]
 		},
-		page,        // ARGV[1]
-		referrer,    // ARGV[2]
-		offset,      // ARGV[3]
-		twodays,     // ARGV[4]
-		sessioncode, // ARGV[5]
-		points,      // ARGV[6]
+		page,     // ARGV[1]
+		referrer, // ARGV[2]
+		offset,   // ARGV[3]
+		twodays,  // ARGV[4]
+		points,   // ARGV[5]
 	)
 
 	if val, err := result.Result(); err != nil {

@@ -1,16 +1,9 @@
-local sk, su, ss, of, ofs, ofe, vo, rfsc, ex
+local sk, su, ss, of, ofs, ofe, vo, ex
 
 ex = ARGV[4]
 
 sk = KEYS[2]
 su = ARGV[2]
-rfsc = KEYS[3]
-if su == "@" then
-  su = redis.call("HGET", rfsc, ARGV[5]) or ""
-else
-  redis.call("HSET", rfsc, ARGV[5], su)
-end
-redis.call("EXPIRE", rfsc, ex)
 
 ss = redis.call("HGET", sk, su) or "~"
 
@@ -23,7 +16,7 @@ ofe = ofs+1
 vo = string.sub(ss, ofs, ofe)
 if vo == "" then vo = 0 else vo = tonumber(vo) end
 
-vo = vo+tonumber(ARGV[6])
+vo = vo+tonumber(ARGV[5])
 if vo > 99 then vo = 99 end
 vo = tostring(vo)
 if string.len(vo) == 1 then
