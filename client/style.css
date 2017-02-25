@@ -59,11 +59,13 @@ nav.nav {
 }
 .card.newsite button { margin-top: 5px; }
 
-.card.trackingcode code { white-space: pre-wrap; }
+.card.detail-trackingcode code { white-space: pre-wrap; }
 
 .card.detail-chart,
 .card.detail-table,
-.card.detail-today {
+.card.detail-today,
+.card.detail-trackingcode,
+.card.detail-about {
   margin: 12px;
 }
 .card.detail-chart .recharts-wrapper { margin-left: 21px; }

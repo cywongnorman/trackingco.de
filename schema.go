@@ -203,7 +203,8 @@ var userType = graphql.NewObject(
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 					var sites []Site
 					err = pg.Raw(`
-SELECT code, name, user_id, created_at FROM sites
+SELECT code, name, user_id, to_char(created_at, 'YYYYMMDD') AS created_at
+  FROM sites
   INNER JOIN (
     SELECT unnest(sites_order) AS c,
            generate_subscripts(sites_order, 1) as o FROM users
@@ -251,8 +252,8 @@ var rootQuery = graphql.ObjectConfig{
 				},
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				site := Site{Code: p.Args["code"].(string)}
-				if err := pg.Model(site).Where(site).Scan(&site); err != nil {
+				site, err := fetchSite(p.Args["code"].(string))
+				if err != nil {
 					return nil, err
 				}
 				if site.UserId != p.Context.Value("loggeduser").(int) {
@@ -344,8 +345,8 @@ var rootMutation = graphql.ObjectConfig{
 				},
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				site := Site{Code: p.Args["code"].(string)}
-				if err := pg.Model(site).Where(site).Scan(&site); err != nil {
+				site, err := fetchSite(p.Args["code"].(string))
+				if err != nil {
 					return nil, err
 				}
 				if site.UserId != p.Context.Value("loggeduser").(int) {
@@ -424,4 +425,12 @@ var rootMutation = graphql.ObjectConfig{
 			},
 		},
 	},
+}
+
+func fetchSite(code string) (site Site, err error) {
+	err = pg.Model(site).
+		Select("code, name, user_id, to_char(created_at, 'YYYYMMDD') AS created_at").
+		Where("code = ?", code).
+		Scan(&site)
+	return site, err
 }

@@ -11,7 +11,7 @@ const names = {
   v: 'all pageviews'
 }
 
-function formatlabel (d) {
+function formatdate (d) {
   if (d) {
     let month = months.abbr[parseInt(d.slice(4, 6)) - 1]
     return d.slice(6) + '/' + month + '/' + d.slice(0, 4)
@@ -33,6 +33,7 @@ module.exports = React.createClass({
         site(code: $code, last: $last) {
           name
           code
+          created_at
           days {
             day
             s
@@ -84,7 +85,7 @@ module.exports = React.createClass({
 const CustomTooltip = function (props) {
   return (
     h('div.custom-tooltip', [
-      h('p.recharts-tooltip-label', formatlabel(props.label)),
+      h('p.recharts-tooltip-label', formatdate(props.label)),
       h('ul.recharts-tooltip-item-list', props.payload.map(item =>
         h('li.recharts-tooltip-item', {style: {color: item.color}}, [
           h('span.recharts-tooltip-item-name', names[item.name]),
@@ -102,7 +103,7 @@ const Data = React.createClass({
       pagesOpen: false,
       referrersOpen: false,
       showSnippet: false,
-      showSettings: false
+      showAbout: false
     }
   },
 
@@ -232,6 +233,72 @@ const Data = React.createClass({
               ])
             ])
           ])
+        ]),
+        h('.columns', [
+          h('.column.is-half', [
+            h('.card.detail-about', [
+              h('.card-header', [
+                h('p.card-header-title', 'Site information'),
+                h('a.card-header-icon', {
+                  onClick: () => { this.setState({showAbout: !this.state.showAbout}) }
+                }, [
+                  h('span.icon', [
+                    h(`i.fa.fa-angle-${this.state.showAbout ? 'down' : 'up'}`)
+                  ])
+                ])
+              ]),
+              this.state.showAbout
+              ? (
+                h('.card-content', [
+                  h('aside.menu', [
+                    h('p.menu-label', 'Name'),
+                    h('ul.menu-list', [
+                      h('li', this.props.site.name)
+                    ]),
+                    h('p.menu-label', 'Code'),
+                    h('ul.menu-list', [
+                      h('li', this.props.site.code)
+                    ]),
+                    h('p.menu-label', 'Sharing'),
+                    h('ul.menu-list', [
+                      h('li', 'This site is private')
+                    ]),
+                    h('p.menu-label', 'Creation date'),
+                    h('ul.menu-list', [
+                      h('li', formatdate(this.props.site.created_at))
+                    ])
+                  ])
+                ])
+              )
+              : ''
+            ])
+          ]),
+          h('.column.is-half', [
+            h('.card.detail-trackingcode', [
+              h('.card-header', [
+                h('p.card-header-title', 'Tracking code'),
+                h('a.card-header-icon', {
+                  onClick: () => { this.setState({showSnippet: !this.state.showSnippet}) }
+                }, [
+                  h('span.icon', [
+                    h(`i.fa.fa-angle-${this.state.showSnippet ? 'down' : 'up'}`)
+                  ])
+                ])
+              ]),
+              this.state.showSnippet
+              ? (
+                h('.card-content', [
+                  h('.content', [
+                    h('p', 'Paste the following in any part of your site:'),
+                    h('pre', [
+                      h('code', `<script>;${snippet(this.props.site.code)};</script>`)
+                    ])
+                  ])
+                ])
+              )
+              : ''
+            ])
+          ])
         ])
       ])
     )
@@ -240,7 +307,7 @@ const Data = React.createClass({
 
 const NoData = function (props) {
   return (
-    h('.card.trackingcode', [
+    h('.card.detail-trackingcode', [
       h('.card-content', [
         h('.content', [
           h('p', 'This site has no data yet. Have you installed the tracking code?'),
