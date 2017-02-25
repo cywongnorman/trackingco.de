@@ -18,6 +18,12 @@ nav.nav {
   font-weight: normal;
   color: #bbb;
 }
+.card-header-title div { display: inline }
+.card-header-title small .react-tangle-input {
+  color: #676;
+  border-bottom: 1px dashed #676 !important;
+  width: 15px;
+}
 
 .card.empty { border: 24px #bbb dotted; height: 285px }
 

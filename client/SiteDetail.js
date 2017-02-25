@@ -1,6 +1,7 @@
 const React = require('react')
 const h = require('react-hyperscript')
 const R = require('recharts')
+const TangleText = require('react-tangle')
 const months = require('months')
 
 const snippet = require('./snippet')
@@ -23,7 +24,7 @@ module.exports = React.createClass({
     return {
       site: null,
       dataMax: 100,
-      nlastdays: 60
+      nlastdays: 45
     }
   },
 
@@ -75,10 +76,14 @@ module.exports = React.createClass({
         ]),
         this.state.dataMax === 0 && this.state.site.today.v === 0
         ? h(NoData, this.state)
-        : h(Data, this.state)
+        : h(Data, {...this.state, updateNLastDays: this.updateNLastDays})
       ])
     )
     : h('div')
+  },
+
+  updateNLastDays (value) {
+    this.setState({nlastdays: value}, this.query)
   }
 })
 
@@ -141,9 +146,18 @@ const Data = React.createClass({
         ]),
         h('.card.detail-chart', [
           h('.card-header', [
-            h('p.card-header-title', [
+            h('.card-header-title', [
               'Number of sessions and pageviews',
-              h('small', `in the last ${this.props.nlastdays} days`)
+              h('small', [
+                'in the last ',
+                h(TangleText, {
+                  value: this.props.nlastdays,
+                  onChange: this.props.updateNLastDays,
+                  min: 2,
+                  max: 90
+                }),
+                ' days'
+              ])
             ])
           ]),
           h('.card-image', [
@@ -177,9 +191,18 @@ const Data = React.createClass({
           h('.column.is-half', [
             h('.card.detail-table', [
               h('.card-header', [
-                h('p.card-header-title', [
+                h('.card-header-title', [
                   'Most viewed pages',
-                  h('small', `in the last ${this.props.nlastdays} days`)
+                  h('small', [
+                    'in the last ',
+                    h(TangleText, {
+                      value: this.props.nlastdays,
+                      onChange: this.props.updateNLastDays,
+                      min: 2,
+                      max: 90
+                    }),
+                    ' days'
+                  ])
                 ])
               ]),
               h('.card-content', [
@@ -202,9 +225,18 @@ const Data = React.createClass({
           h('.column.is-half', [
             h('.card.detail-table', [
               h('.card-header', [
-                h('p.card-header-title', [
+                h('.card-header-title', [
                   'Top referring sites',
-                  h('small', `in the last ${this.props.nlastdays} days`)
+                  h('small', [
+                    'in the last ',
+                    h(TangleText, {
+                      value: this.props.nlastdays,
+                      onChange: this.props.updateNLastDays,
+                      min: 2,
+                      max: 90
+                    }),
+                    ' days'
+                  ])
                 ])
               ]),
               h('.card-content', [
