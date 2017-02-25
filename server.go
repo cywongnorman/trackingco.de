@@ -33,7 +33,7 @@ func runServer() {
 
 	app.Get("/client/{file:.*}", func(c *iris.Context) { c.ServeFile("client/"+c.Param("file"), false) })
 
-	app.Get("/{meaningless:[0-9a-zA-Z-]+.}{extension:(?:gif|jpg|jpeg|png)}", track)
+	app.Get("/{sessionhashid:[0-9a-zA-Z-]+.}.xml", track)
 
 	log.Print("listening at :" + s.Port)
 	app.Listen(":" + s.Port)

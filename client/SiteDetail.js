@@ -230,36 +230,12 @@ const NoData = function (props) {
   return (
     h('.card.trackingcode', [
       h('.card-content', [
-        h('p', 'This site has no data yet. Have you installed the tracking code?'),
-        h('p', 'Just paste the following in any part of your site:'),
-        h('pre', [
-          h('code', `<script>;${snippet(props.site.code)};</script>`)
-        ]),
-        h('p', [
-          'To bypass ad blockers that may be preventing some of your visitors from being tracked, you can use your own domain instead of ',
-          h('code', 't.trackingco.de'),
-          '. Just ',
-          h('code', 'CNAME'),
-          ' it to ',
-          h('code', 't.trackingco.de'),
-          " and that's it."
-        ]),
-        h('p', [
-          'Some ad blockers are also blocking based on the URL path. For example, ',
-          h('code', '/track.gif'),
-          ' or ',
-          h('code', '/t.gif'),
-          ' are already in many blocklists. But you can use any word ending in ',
-          h('code', '.git'),
-          ' ',
-          h('code', '.jpg'),
-          ' or ',
-          h('code', '.png'),
-          ' like ',
-          h('code', '/logo.png'),
-          ' or ',
-          h('code', '/header-image.jpg'),
-          '.'
+        h('.content', [
+          h('p', 'This site has no data yet. Have you installed the tracking code?'),
+          h('p', 'Just paste the following in any part of your site:'),
+          h('pre', [
+            h('code', `<script>;${snippet(props.site.code)};</script>`)
+          ])
         ])
       ])
     ])

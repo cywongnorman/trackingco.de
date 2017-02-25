@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"log"
 	"net/url"
 	"strconv"
@@ -12,12 +11,20 @@ import (
 )
 
 func track(c *iris.Context) {
-	defer sendImage(c)
+	// cors
+	c.SetHeader("Vary", "Origin")
+	c.SetHeader("Access-Control-Allow-Origin", c.RequestHeader("Origin"))
+
+	// no cache
+	c.SetHeader("Cache-Control", "no-cache, no-store, must-revalidate")
+	c.SetHeader("Pragma", "no-cache")
+	c.SetHeader("Expires", "0")
 
 	// tracking code
 	code := c.FormValue("c")
 	if code == "" {
 		log.Print("didn't send tracking code.")
+		sendBlank(c)
 		return
 	}
 
@@ -31,6 +38,7 @@ func track(c *iris.Context) {
 	upage, err := url.Parse(c.RequestHeader("Referer"))
 	if err != nil {
 		log.Print("invalid Referer: ", c.RequestHeader("Referer"), " - ", err)
+		sendBlank(c)
 		return
 	}
 	page := strings.TrimRight(upage.Path, "/")
@@ -57,18 +65,15 @@ func track(c *iris.Context) {
 	// session (a hashid that translates to a number, which is the offset for the array of points)
 	var offset int
 	var sessioncode int
-	if hi := c.GetCookie("_tcs"); hi != "" {
-		// existing session
-		if offsetarr, err := hso.DecodeWithError(hi); err != nil || len(offsetarr) != 2 {
-			log.Print("error decoding session hashid ", hi, ": ", err, " (treating as new session)")
-			offset = -1
-		} else {
-			// _valid_ existing session
-			offset = offsetarr[0]
-			// this session code will be used to fetch the referrer for this session
-			sessioncode = offsetarr[1]
-			referrer = "@"
-		}
+	hi := c.Param("sessionhashid")
+
+	// try to decode (at first it may be an invalid string)
+	if offsetarr, err := hso.DecodeWithError(hi); err == nil && len(offsetarr) == 2 {
+		// success decoding, it is a _valid_ existing session
+		offset = offsetarr[0]
+		// this session code will be used to fetch the referrer for this session
+		sessioncode = offsetarr[1]
+		referrer = "@"
 	} else {
 		// new session
 		offset = -1
@@ -97,49 +102,26 @@ func track(c *iris.Context) {
 
 	if val, err := result.Result(); err != nil {
 		log.Print("error executing track.lua: ", err)
+		sendBlank(c)
 		return
 	} else {
 		offset = int(val.(int64))
 	}
 
 	// send session to user
-	hi, err := hso.Encode([]int{offset, sessioncode})
+	hi, err = hso.Encode([]int{offset, sessioncode})
 	if err != nil {
 		log.Print("error encoding hashid for session offset ", offset, ": ", err)
+		sendBlank(c)
 		return
 	}
-	c.SetCookieKV("_tcs", hi)
+	c.SetStatusCode(200)
+	c.ResponseWriter.WriteString(hi)
 
 	log.Print("tracked ", code, " ", referrer, " ", offset, " ", page)
 }
 
-func sendImage(c *iris.Context) {
-	// no cache
-	c.SetHeader("Cache-Control", "no-cache, no-store, must-revalidate")
-	c.SetHeader("Pragma", "no-cache")
-	c.SetHeader("Expires", "0")
-
-	var buffer *bytes.Buffer
-
-	switch c.Param("extension") {
-	case "gif":
-		buffer = gifimage
-		c.SetContentType("image/gif")
-		break
-	case "jpeg", "jpg":
-		buffer = jpgimage
-		c.SetContentType("image/jpeg")
-		break
-	case "png":
-		buffer = pngimage
-		c.SetContentType("image/png")
-		break
-	}
-
-	c.SetHeader("Content-Length", strconv.Itoa(len(buffer.Bytes())))
-
-	if _, err = c.ResponseWriter.Write(buffer.Bytes()); err != nil {
-		log.Print("failed to serve image: ", err)
-		c.HTML(500, "<p>Erro!</p>")
-	}
+func sendBlank(c *iris.Context) {
+	c.SetStatusCode(204)
+	c.ResponseWriter.WriteString("")
 }

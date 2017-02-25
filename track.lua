@@ -6,7 +6,7 @@ sk = KEYS[2]
 su = ARGV[2]
 rfsc = KEYS[3]
 if su == "@" then
-  su = redis.call("HGET", rfsc, ARGV[5])
+  su = redis.call("HGET", rfsc, ARGV[5]) or ""
 else
   redis.call("HSET", rfsc, ARGV[5], su)
 end
