@@ -58,14 +58,7 @@ type CouchDBResults struct {
 }
 
 func (res CouchDBResults) toCompendiumList() []Compendium {
-	var size int
-	if size = len(res.Rows); size == 0 {
-		// default to 1, because code on schema.go
-		// expects a slice of at least length 1
-		size = 1
-	}
-
-	var c = make([]Compendium, size)
+	var c = make([]Compendium, len(res.Rows)+1) // +1 will be used in a later loop, and it does no harm
 	for i, row := range res.Rows {
 		c[i] = row.Doc
 		c[i].Day = strings.Split(row.Id, ":")[1]
