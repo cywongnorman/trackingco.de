@@ -83,7 +83,7 @@ func track(c *iris.Context) {
 
 	// store data to redis
 	twodays := int(time.Hour * 48)
-	key := redisKeyFactory(code, time.Now().Format(DATEFORMAT))
+	key := redisKeyFactory(code, presentDay().Format(DATEFORMAT))
 
 	result := rds.Eval(
 		tracklua,

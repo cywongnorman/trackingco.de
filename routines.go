@@ -2,8 +2,6 @@ package main
 
 import (
 	"log"
-	"strconv"
-	"time"
 
 	"github.com/ogier/pflag"
 )
@@ -11,7 +9,7 @@ import (
 func daily() {
 	var day string
 	pflag.StringVar(&day, "day",
-		time.Now().AddDate(0, 0, -1).Format(DATEFORMAT),
+		presentDay().AddDate(0, 0, -1).Format(DATEFORMAT),
 		"compile stats from which day?")
 	pflag.Parse()
 
@@ -25,28 +23,8 @@ func daily() {
 	for _, site := range sites {
 		log.Print("-------------")
 		log.Print(" > site ", site.Code, " (", site.Name, "), from ", site.UserId, ":")
-		key := redisKeyFactory(site.Code, day)
 
-		stats := Compendium{
-			Id:       makeBaseKey(site.Code, day),
-			Sessions: make(map[string]string),
-			Pages:    make(map[string]int),
-		}
-
-		// grab stats from redis
-		if val, err := rds.HGetAll(key("s")).Result(); err == nil {
-			for k, v := range val {
-				stats.Sessions[k] = v
-			}
-		}
-		if val, err := rds.HGetAll(key("p")).Result(); err == nil {
-			for k, v := range val {
-				if count, err := strconv.Atoi(v); err == nil {
-					stats.Pages[k] = count
-				}
-			}
-		}
-
+		stats := compendiumFromRedis(site.Code, day)
 		log.Print(stats)
 
 		// check for zero-stats (to save disk space we won't store these)

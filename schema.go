@@ -52,7 +52,7 @@ var entryType = graphql.NewObject(
 			},
 			"c": &graphql.Field{
 				Type:        graphql.Int,
-				Description: "the number of times it appeared.",
+				Description: "the number of times it has appeared.",
 			},
 		},
 	},
@@ -174,6 +174,14 @@ var siteType = graphql.NewObject(
 					}
 
 					return days, nil
+				},
+			},
+			"today": &graphql.Field{
+				Type: compendiumType,
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					sitecode := p.Source.(Site).Code
+					today := presentDay().Format(DATEFORMAT)
+					return compendiumFromRedis(sitecode, today), nil
 				},
 			},
 			"months": &graphql.Field{Type: graphql.NewList(compendiumType)},

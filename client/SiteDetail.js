@@ -41,29 +41,37 @@ function crunch (days, key) {
 module.exports = React.createClass({
   getInitialState () {
     return {
-      site: {},
+      site: {
+        today: {},
+        days: []
+      },
       dataMax: 100,
       referrers: [],
-      pages: []
+      pages: [],
+      nlastdays: 60
     }
   },
 
   query () {
     graphql.query(`
-      query d($code: String!) {
+      query d($code: String!, $last: Int) {
         site(code: $code) {
           name
           code
-          days(last:60) {
+          days(last: $last) {
             day
             s
             v
             p { a, c }
             r { a, c }
           }
+          today {
+            s
+            v
+          }
         }
       }
-    `, {code: this.props.match.params.code})
+    `, {code: this.props.match.params.code, last: this.props.nlastdays})
     .then(r => {
       this.setState({
         site: r.site,
@@ -90,7 +98,7 @@ module.exports = React.createClass({
           h('h4.title.is-3', this.state.site.name),
           h('h6.subtitle.is-6', this.state.site.code)
         ]),
-        this.state.dataMax === 0
+        this.state.dataMax === 0 && this.state.site.today.v === 0
         ? h(NoData, this.state)
         : h(Data, this.state)
       ])
@@ -135,9 +143,30 @@ const Data = React.createClass({
 
     return (
       h('.container', [
+        h('.columns', [
+          h('.column.is-half', [
+            h('.card.detail-today.has-text-left', [
+              h('.card-content', [
+                h('h4.subtitle.is-4', 'Pageviews today:'),
+                h('h1.title.is-1', this.props.site.today.v || 0)
+              ])
+            ])
+          ]),
+          h('.column.is-half', [
+            h('.card.detail-today.has-text-right', [
+              h('.card-content', [
+                h('h4.subtitle.is-4', 'Sessions today:'),
+                h('h1.title.is-1', this.props.site.today.s || 0)
+              ])
+            ])
+          ])
+        ]),
         h('.card.detail-chart', [
           h('.card-header', [
-            h('p.card-header-title', 'Number of sessions and pageviews')
+            h('p.card-header-title', [
+              'Number of sessions and pageviews',
+              h('small', `in the last ${this.props.nlastdays} days`)
+            ])
           ]),
           h('.card-image', [
             h('figure.image', [
@@ -170,7 +199,10 @@ const Data = React.createClass({
           h('.column.is-half', [
             h('.card.detail-table', [
               h('.card-header', [
-                h('p.card-header-title', 'Most viewed pages')
+                h('p.card-header-title', [
+                  'Most viewed pages',
+                  h('small', `in the last ${this.props.nlastdays} days`)
+                ])
               ]),
               h('.card-content', [
                 h('table.table', [
@@ -192,7 +224,10 @@ const Data = React.createClass({
           h('.column.is-half', [
             h('.card.detail-table', [
               h('.card-header', [
-                h('p.card-header-title', 'Top referring sites')
+                h('p.card-header-title', [
+                  'Top referring sites',
+                  h('small', `in the last ${this.props.nlastdays} days`)
+                ])
               ]),
               h('.card-content', [
                 h('table.table', [

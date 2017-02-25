@@ -13,6 +13,12 @@ nav.nav {
   background-color: transparent;
 }
 
+.card-header-title small {
+  margin-left: 10px;
+  font-weight: normal;
+  color: #bbb;
+}
+
 .card.empty { border: 24px #bbb dotted; height: 285px }
 
 .card.site { margin: 0 5px; }
@@ -35,13 +41,13 @@ nav.nav {
   display: block;
   margin: 50px;
   font-size: 100px;
-  color: #999999;
+  color: #bbb;
 }
 
 .card.site .card-footer-item.danger { background-color: #ff3860; color: #fff }
 .card.site .card-footer-item.save { background-color: #3273dc; color: #fff }
 
-.card.newsite:hover { color: #999999; }
+.card.newsite:hover { color: #bbb; }
 .card.newsite .card-content {
   text-align: center;
   cursor: pointer;
@@ -55,9 +61,12 @@ nav.nav {
 
 .card.trackingcode code { white-space: pre-wrap; }
 
-.card.detail-chart { margin: 12px; }
+.card.detail-chart,
+.card.detail-table,
+.card.detail-today {
+  margin: 12px;
+}
 .card.detail-chart .recharts-wrapper { margin-left: 21px; }
-.card.detail-table { margin: 12px; }
 .card.detail-table td:first-child {
   max-width: 120px;
   text-overflow: ellipsis;

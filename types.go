@@ -45,6 +45,7 @@ type Site struct {
 	CreatedAt string       `json:"created_at,omitempty"`
 	Days      []Compendium `json:"days,omitempty" sql:"-"`
 	Months    []Compendium `json:"months,omitempty" sql:"-"`
+	Today     Compendium   `json:"today,omitempty" sql:"-"`
 }
 
 func (_ Site) TableName() string { return "sites" }
