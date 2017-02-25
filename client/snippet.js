@@ -5,7 +5,7 @@ module.exports = function (code) {
   var x, h, n = Date.now()
   tc = function (p) {
     p = p || 1
-    m = s.getItem('_tcx') > n ? s.getItem('_tch') : '${randomWord()}'
+    m = s.getItem('_tcx') > n ? s.getItem('_tch') : '${randomWord()}-${randomWord()}'
     x = new XMLHttpRequest()
     x.addEventListener('load', function () {
       if (x.status == 200) {

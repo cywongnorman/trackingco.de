@@ -75,7 +75,7 @@ func track(c *iris.Context) {
 		sessioncode = offsetarr[1]
 		referrer = rds.Get("rs:" + strconv.Itoa(sessioncode)).Val()
 	} else {
-		// new session
+		// error decoding, so it is a new session
 		offset = -1
 		// this session code will be used to store the referrer for this session
 		sessioncode = randomNumber(999999999)
@@ -117,7 +117,7 @@ func track(c *iris.Context) {
 	c.SetStatusCode(200)
 	c.ResponseWriter.WriteString(hi)
 
-	log.Print("tracked ", code, " ", referrer, " ", offset, " ", page)
+	log.Print("tracked ", code, " ", referrer, " ", hi, " ", offset, " ", page)
 }
 
 func sendBlank(c *iris.Context) {
