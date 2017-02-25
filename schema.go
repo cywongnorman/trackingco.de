@@ -89,37 +89,6 @@ var compendiumType = graphql.NewObject(
 					return i, nil
 				},
 			},
-			"r": &graphql.Field{
-				Type:        graphql.NewList(entryType),
-				Description: "a list of entries of referrers, sorted by the number of occurrences.",
-				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-					d := p.Source.(Compendium).Sessions
-					entries := make([]Entry, len(d))
-					i := 0
-					for addr, pointmap := range d {
-						count := (len(pointmap) - 1) / 2
-						entries[i] = Entry{addr, count}
-						i++
-					}
-					sort.Sort(EntrySort(entries))
-					return entries, nil
-				},
-			},
-			"p": &graphql.Field{
-				Type:        graphql.NewList(entryType),
-				Description: "a list of entries of viewed pages, sorted by the number of occurrences.",
-				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-					d := p.Source.(Compendium).Pages
-					entries := make([]Entry, len(d))
-					i := 0
-					for addr, count := range d {
-						entries[i] = Entry{addr, count}
-						i++
-					}
-					sort.Sort(EntrySort(entries))
-					return entries, nil
-				},
-			},
 		},
 	},
 )
@@ -134,38 +103,19 @@ var siteType = graphql.NewObject(
 			"user_id":    &graphql.Field{Type: graphql.String},
 			"days": &graphql.Field{
 				Type: graphql.NewList(compendiumType),
-				Args: graphql.FieldConfigArgument{
-					"last": &graphql.ArgumentConfig{
-						Description:  "number of last days to fetch",
-						Type:         graphql.Int,
-						DefaultValue: 30,
-					},
-				},
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-					res := CouchDBResults{}
-					sitecode := p.Source.(Site).Code
-					last := p.Args["last"].(int)
-					yesterday := presentDay().AddDate(0, 0, -1)
-					startday := yesterday.AddDate(0, 0, -last)
-					err := couch.AllDocs(&res, couchdb.Options{
-						"startkey":     makeBaseKey(sitecode, startday.Format(DATEFORMAT)),
-						"endkey":       makeBaseKey(sitecode, yesterday.Format(DATEFORMAT)),
-						"include_docs": true,
-					})
-					if err != nil {
-						return nil, err
-					}
-					fetcheddays := res.toCompendiumList()
-					days := make([]Compendium, last+1)
+					site := p.Source.(Site)
+					days := make([]Compendium, site.lastDays+1)
 
 					// fill in missing days with zeroes
-					current := startday
+					yesterday := presentDay().AddDate(0, 0, -1)
+					current := yesterday.AddDate(0, 0, -site.lastDays)
 					currentpos := 0
-					fetchedpos := 0
+					couchpos := 0
 					for !current.After(yesterday) {
-						if fetcheddays[fetchedpos].Day == current.Format(DATEFORMAT) {
-							days[currentpos] = fetcheddays[fetchedpos]
-							fetchedpos++
+						if site.couchDays[couchpos].Day == current.Format(DATEFORMAT) {
+							days[currentpos] = site.couchDays[couchpos]
+							couchpos++
 						} else {
 							days[currentpos].Day = current.Format(DATEFORMAT)
 						}
@@ -174,6 +124,59 @@ var siteType = graphql.NewObject(
 					}
 
 					return days, nil
+				},
+			},
+			"referrers": &graphql.Field{
+				Type:        graphql.NewList(entryType),
+				Description: "a list of entries of referrers, sorted by the number of occurrences.",
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					all := make(map[string]int)
+					for _, compendium := range p.Source.(Site).couchDays {
+						for addr, pointmap := range compendium.Sessions {
+							count := (len(pointmap) - 1) / 2
+							if prevcount, exists := all[addr]; exists {
+								all[addr] = prevcount + count
+							} else {
+								all[addr] = count
+							}
+						}
+					}
+
+					entries := make([]Entry, len(all))
+					i := 0
+					for addr, count := range all {
+						entries[i] = Entry{addr, count}
+						i++
+					}
+					sort.Sort(EntrySort(entries))
+
+					return entries, nil
+				},
+			},
+			"pages": &graphql.Field{
+				Type:        graphql.NewList(entryType),
+				Description: "a list of entries of viewed pages, sorted by the number of occurrences.",
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					all := make(map[string]int)
+					for _, compendium := range p.Source.(Site).couchDays {
+						for addr, count := range compendium.Pages {
+							if prevcount, exists := all[addr]; exists {
+								all[addr] = prevcount + count
+							} else {
+								all[addr] = count
+							}
+						}
+					}
+
+					entries := make([]Entry, len(all))
+					i := 0
+					for addr, count := range all {
+						entries[i] = Entry{addr, count}
+						i++
+					}
+					sort.Sort(EntrySort(entries))
+
+					return entries, nil
 				},
 			},
 			"today": &graphql.Field{
@@ -241,6 +244,11 @@ var rootQuery = graphql.ObjectConfig{
 					Description: "a site's unique tracking code.",
 					Type:        graphql.String,
 				},
+				"last": &graphql.ArgumentConfig{
+					Description:  "number of last days to use (don't set if not requesting days, referrers or pages).",
+					Type:         graphql.Int,
+					DefaultValue: -1,
+				},
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 				site := Site{Code: p.Args["code"].(string)}
@@ -250,6 +258,24 @@ var rootQuery = graphql.ObjectConfig{
 				if site.UserId != p.Context.Value("loggeduser").(int) {
 					return nil, errors.New("you're not authorized to view this site.")
 				}
+
+				// do we need to fetch the compendium list from couchdb or not?
+				site.lastDays = p.Args["last"].(int)
+				if site.lastDays > 0 {
+					res := CouchDBDayResults{}
+					yesterday := presentDay().AddDate(0, 0, -1)
+					startday := yesterday.AddDate(0, 0, -site.lastDays)
+					err := couch.AllDocs(&res, couchdb.Options{
+						"startkey":     makeBaseKey(site.Code, startday.Format(DATEFORMAT)),
+						"endkey":       makeBaseKey(site.Code, yesterday.Format(DATEFORMAT)),
+						"include_docs": true,
+					})
+					if err != nil {
+						return nil, err
+					}
+					site.couchDays = res.toCompendiumList()
+				}
+
 				return site, nil
 			},
 		},

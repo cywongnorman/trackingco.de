@@ -21,7 +21,7 @@ const SiteCard = React.createClass({
     fragment on Site {
       name
       code
-      days(last:7) {
+      days {
         day
         s
         v
@@ -32,7 +32,7 @@ const SiteCard = React.createClass({
   query () {
     graphql.query(`
       query c($code: String!) {
-        site(code: $code) {
+        site(code: $code, last: 7) {
           ...${this.sitef}
         }
       }

@@ -18,36 +18,11 @@ function formatlabel (d) {
   }
 }
 
-function crunch (days, key) {
-  var crunched = {}
-  for (let i = 0; i < days.length; i++) {
-    let entries = days[i][key]
-    for (let j = 0; j < entries.length; j++) {
-      let entry = entries[j]
-      crunched[entry.a] = crunched[entry.a] || 0
-      crunched[entry.a] += entry.c
-    }
-
-    // recharts complains of these arrays here, so let's remove them after use
-    delete days[i][key]
-  }
-  return Object.keys(crunched)
-    .filter(k => k)
-    .sort((a, b) => crunched[b] - crunched[a])
-    .map(k => [k, crunched[k]])
-}
-
-
 module.exports = React.createClass({
   getInitialState () {
     return {
-      site: {
-        today: {},
-        days: []
-      },
+      site: null,
       dataMax: 100,
-      referrers: [],
-      pages: [],
       nlastdays: 60
     }
   },
@@ -55,29 +30,27 @@ module.exports = React.createClass({
   query () {
     graphql.query(`
       query d($code: String!, $last: Int) {
-        site(code: $code) {
+        site(code: $code, last: $last) {
           name
           code
-          days(last: $last) {
+          days {
             day
             s
             v
-            p { a, c }
-            r { a, c }
           }
+          pages { a, c }
+          referrers { a, c }
           today {
             s
             v
           }
         }
       }
-    `, {code: this.props.match.params.code, last: this.props.nlastdays})
+    `, {code: this.props.match.params.code, last: this.state.nlastdays})
     .then(r => {
       this.setState({
         site: r.site,
-        dataMax: Math.max(...r.site.days.map(d => d.v)),
-        referrers: crunch(r.site.days, 'r'),
-        pages: crunch(r.site.days, 'p')
+        dataMax: Math.max(...r.site.days.map(d => d.v))
       })
     })
     .catch(console.log.bind(console))
@@ -92,7 +65,8 @@ module.exports = React.createClass({
   },
 
   render () {
-    return (
+    return this.state.site
+    ? (
       h('.container', [
         h('.content', [
           h('h4.title.is-3', this.state.site.name),
@@ -103,6 +77,7 @@ module.exports = React.createClass({
         : h(Data, this.state)
       ])
     )
+    : h('div')
   }
 })
 
@@ -125,20 +100,22 @@ const Data = React.createClass({
   getInitialState () {
     return {
       pagesOpen: false,
-      referrersOpen: false
+      referrersOpen: false,
+      showSnippet: false,
+      showSettings: false
     }
   },
 
   render () {
-    let pagesMore = this.props.pages.length > 12
-    var pages = this.props.pages
+    let pagesMore = this.props.site.pages.length > 12
+    var pages = this.props.site.pages
     if (!this.state.pagesOpen) {
-      pages = this.props.pages.slice(0, 12)
+      pages = this.props.site.pages.slice(0, 12)
     }
-    let referrersMore = this.props.referrers.length > 12
-    var referrers = this.props.referrers
+    let referrersMore = this.props.site.referrers.length > 12
+    var referrers = this.props.site.referrers
     if (!this.state.referrersOpen) {
-      referrers = this.props.referrers.slice(0, 12)
+      referrers = this.props.site.referrers.slice(0, 12)
     }
 
     return (
@@ -206,7 +183,7 @@ const Data = React.createClass({
               ]),
               h('.card-content', [
                 h('table.table', [
-                  h('tbody', pages.map(([addr, count]) =>
+                  h('tbody', pages.map(({a: addr, c: count}) =>
                     h('tr', [
                       h('td', addr),
                       h('td', count)
@@ -231,7 +208,7 @@ const Data = React.createClass({
               ]),
               h('.card-content', [
                 h('table.table', [
-                  h('tbody', referrers.map(([addr, count]) =>
+                  h('tbody', referrers.map(({a: addr, c: count}) =>
                     h('tr', [
                       h('td', [
                         addr + ' ',
