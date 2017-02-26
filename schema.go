@@ -148,7 +148,7 @@ var siteType = graphql.NewObject(
 						entries[i] = Entry{addr, count}
 						i++
 					}
-					sort.Sort(EntrySort(entries))
+					sort.Sort(sort.Reverse(EntrySort(entries)))
 
 					return entries, nil
 				},
@@ -174,7 +174,7 @@ var siteType = graphql.NewObject(
 						entries[i] = Entry{addr, count}
 						i++
 					}
-					sort.Sort(EntrySort(entries))
+					sort.Sort(sort.Reverse(EntrySort(entries)))
 
 					return entries, nil
 				},
