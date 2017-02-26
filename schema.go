@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/fjl/go-couchdb"
@@ -58,6 +59,34 @@ var entryType = graphql.NewObject(
 	},
 )
 
+var individualSessionType = graphql.NewObject(
+	graphql.ObjectConfig{
+		Name:        "IndividualSession",
+		Description: "A tuple of referrer / number of points scored by this session",
+		Fields: graphql.Fields{
+			"day": &graphql.Field{
+				Type:        graphql.String,
+				Description: "the date in format YYYYMMDD.",
+			},
+			"r": &graphql.Field{
+				Type:        graphql.String,
+				Description: "the referrer.",
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					addr := p.Source.(IndividualSession).Referrer
+					if addr == "" {
+						return "<direct>", nil
+					}
+					return addr, nil
+				},
+			},
+			"p": &graphql.Field{
+				Type:        graphql.Int,
+				Description: "the number of points.",
+			},
+		},
+	},
+)
+
 var compendiumType = graphql.NewObject(
 	graphql.ObjectConfig{
 		Name:        "Compendium",
@@ -71,22 +100,41 @@ var compendiumType = graphql.NewObject(
 				Type:        graphql.Int,
 				Description: "total number of pageviews.",
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-					i := 0
+					totalpages := 0
 					for _, count := range p.Source.(Compendium).Pages {
-						i += count
+						totalpages += count
 					}
-					return i, nil
+					return totalpages, nil
 				},
 			},
 			"s": &graphql.Field{
 				Type:        graphql.Int,
 				Description: "total number of sessions.",
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-					i := 0
+					totalsessions := 0
 					for _, pointmap := range p.Source.(Compendium).Sessions {
-						i += (len(pointmap) - 1) / 2
+						totalsessions += (len(pointmap) - 1) / 2
 					}
-					return i, nil
+					return totalsessions, nil
+				},
+			},
+			"b": &graphql.Field{
+				Type:        graphql.Float,
+				Description: "the bounce rate for this period.",
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					totalsessions := 0
+					totalbounces := 0
+					for _, pointmap := range p.Source.(Compendium).Sessions {
+						l := len(pointmap)
+						nsessions := (l - 1) / 2
+						totalsessions += nsessions
+						for s := 0; s < nsessions; s++ {
+							if l >= s*2+3 && pointmap[s*2+1:s*2+3] == "01" {
+								totalbounces += 1
+							}
+						}
+					}
+					return float64(totalbounces) / float64(totalsessions), nil
 				},
 			},
 		},
@@ -132,20 +180,20 @@ var siteType = graphql.NewObject(
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 					all := make(map[string]int)
 					for _, compendium := range p.Source.(Site).couchDays {
-						for addr, pointmap := range compendium.Sessions {
+						for ref, pointmap := range compendium.Sessions {
 							count := (len(pointmap) - 1) / 2
-							if prevcount, exists := all[addr]; exists {
-								all[addr] = prevcount + count
+							if prevcount, exists := all[ref]; exists {
+								all[ref] = prevcount + count
 							} else {
-								all[addr] = count
+								all[ref] = count
 							}
 						}
 					}
 
 					entries := make([]Entry, len(all))
 					i := 0
-					for addr, count := range all {
-						entries[i] = Entry{addr, count}
+					for ref, count := range all {
+						entries[i] = Entry{ref, count}
 						i++
 					}
 					sort.Sort(sort.Reverse(EntrySort(entries)))
@@ -179,12 +227,40 @@ var siteType = graphql.NewObject(
 					return entries, nil
 				},
 			},
+			"sessions": &graphql.Field{
+				Type:        graphql.NewList(individualSessionType),
+				Description: "a list of individual sessions, each with its day, referrer and number of points",
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					var all []IndividualSession
+					for _, compendium := range p.Source.(Site).couchDays {
+						for ref, pointmap := range compendium.Sessions {
+							l := len(pointmap)
+							nsessions := (l - 1) / 2
+							for s := 0; s < nsessions; s++ {
+								if l >= s*2+3 {
+									points, err := strconv.Atoi(pointmap[s*2+1 : s*2+3])
+									if err != nil {
+										continue
+									}
+									all = append(
+										all,
+										IndividualSession{compendium.Day, ref, points},
+									)
+								}
+							}
+						}
+					}
+					return all, nil
+				},
+			},
 			"today": &graphql.Field{
 				Type: compendiumType,
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 					sitecode := p.Source.(Site).Code
 					today := presentDay().Format(DATEFORMAT)
-					return compendiumFromRedis(sitecode, today), nil
+					compendium := compendiumFromRedis(sitecode, today)
+					compendium.Day = today
+					return compendium, nil
 				},
 			},
 			"months": &graphql.Field{Type: graphql.NewList(compendiumType)},

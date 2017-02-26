@@ -27,6 +27,12 @@ func (a EntrySort) Len() int           { return len(a) }
 func (a EntrySort) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a EntrySort) Less(i, j int) bool { return a[i].Count < a[j].Count }
 
+type IndividualSession struct {
+	Day      string `json:"day"`
+	Referrer string `json:"r"`
+	Points   int    `json:"p"`
+}
+
 type User struct {
 	Id       int    `json:"id,omitempty" igor:"primary_key"`
 	Name     string `json:"name,omitempty"`
