@@ -9,7 +9,7 @@ import (
 func daily() {
 	var day string
 	pflag.StringVar(&day, "day",
-		presentDay().Format(DATEFORMAT),
+		presentDay().AddDate(0, 0, -1).Format(DATEFORMAT),
 		"compile stats from which day?")
 	pflag.Parse()
 
