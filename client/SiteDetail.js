@@ -40,6 +40,10 @@ module.exports = React.createClass({
             s
             v
           }
+          sessionsbyreferrer {
+            referrer
+            scores
+          }
           pages { a, c }
           referrers { a, c }
           today {
@@ -157,7 +161,7 @@ const Data = React.createClass({
             ])
           ])
         ]),
-        h('.card.detail-chart', [
+        h('.card.detail-chart-main', [
           h('.card-header', [
             h('.card-header-title', [
               'Number of sessions and pageviews',
@@ -194,6 +198,45 @@ const Data = React.createClass({
                   h(R.Line, {
                     dataKey: 'v',
                     stroke: '#82ca9d'
+                  })
+                ])
+              ])
+            ])
+          ])
+        ]),
+        h('.card.detail-chart-individualsessions', [
+          h('.card-header', [
+            h('.card-header-title', [
+              'All sessions with their scores',
+              h('small', [
+                'in the last ',
+                h(TangleText, {
+                  value: this.props.nlastdays,
+                  onChange: this.props.updateNLastDays,
+                  min: 2,
+                  max: 90
+                }),
+                ' days'
+              ])
+            ])
+          ]),
+          h('.card-image', [
+            h('figure.image', [
+              h(R.ResponsiveContainer, {height: 200, width: '100%'}, [
+                h(R.BarChart, {
+                  data: this.props.site.sessionsbyreferrer.map(group =>
+                    group.scores.map(score => ({
+                      referrer: group.referrer,
+                      score: score
+                    }))
+                  ).reduce((a, b) => a.concat(b), [])
+                }, [
+                  h(R.Bar, {
+                    dataKey: 'score',
+                    fill: '#a7533e'
+                  }),
+                  h(R.Tooltip, {
+                    labelFormatter: d => d.referrer
                   })
                 ])
               ])

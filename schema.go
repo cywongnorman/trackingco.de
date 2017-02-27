@@ -9,7 +9,6 @@ import (
 
 	"github.com/fjl/go-couchdb"
 	"github.com/graphql-go/graphql"
-	"github.com/kr/pretty"
 )
 
 type GraphQLRequest struct {
@@ -249,16 +248,12 @@ var siteType = graphql.NewObject(
 						}
 					}
 
-					pretty.Log(byref)
-
 					sessiongroups := make([]SessionGroup, len(byref))
 					i := 0
 					for ref, sessions := range byref {
 						sessiongroups[i] = SessionGroup{ref, sessions}
 						i++
 					}
-
-					pretty.Log(sessiongroups)
 
 					return sessiongroups, nil
 				},

@@ -67,14 +67,15 @@ nav.nav {
 
 .card.detail-trackingcode code { white-space: pre-wrap; }
 
-.card.detail-chart,
+.card.detail-chart-main,
+.card.detail-chart-individualsessions,
 .card.detail-table,
 .card.detail-today,
 .card.detail-trackingcode,
 .card.detail-about {
   margin: 12px;
 }
-.card.detail-chart .recharts-wrapper { margin-left: 21px; }
+.card.detail-chart-main .recharts-wrapper { margin-left: 21px; }
 .card.detail-table td:first-child {
   max-width: 120px;
   text-overflow: ellipsis;
