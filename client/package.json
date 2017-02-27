@@ -2,10 +2,12 @@
   "name": "trackingco.de-client",
   "dependencies": {
     "color": "^1.0.3",
+    "leven": "^2.1.0",
     "lokka": "^1.7.0",
     "lokka-transport-http": "^1.6.1",
     "months": "^1.0.1",
     "porreta": "^1.7.0",
+    "randomcolor": "^0.4.4",
     "react": "^15.4.2",
     "react-click-outside": "^2.2.0",
     "react-dnd": "^2.2.3",
@@ -16,6 +18,7 @@
     "react-router-dom": "^4.0.0-beta.6",
     "react-tangle": "github:fiatjaf/react-tangle",
     "recharts": "^0.20.8",
+    "url": "^0.11.0",
     "xtend": "^4.0.1"
   },
   "scripts": {

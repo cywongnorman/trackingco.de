@@ -2,7 +2,7 @@ const React = require('react')
 const h = require('react-hyperscript')
 const R = require('recharts')
 
-const colours = require('../helpers').colours
+const referrerColour = require('../helpers').referrerColour
 
 module.exports = React.createClass({
   shouldComponentUpdate (nextProps, nextState) {
@@ -12,21 +12,23 @@ module.exports = React.createClass({
   },
 
   render () {
+    var individualsessions = this.props.site.sessionsbyreferrer.map(group =>
+      group.scores.map(score => ({
+        referrer: group.referrer,
+        score
+      }))
+    ).reduce((a, b) => a.concat(b), [])
+
     return (
       h(R.ResponsiveContainer, {height: 200, width: '100%'}, [
         h(R.BarChart, {
-          data: this.props.site.sessionsbyreferrer.map(group =>
-            group.scores.map(score => ({
-              referrer: group.referrer,
-              score: score
-            }))
-          ).reduce((a, b) => a.concat(b), [])
+          data: individualsessions,
+          barGap: '5%'
         }, [
           h(R.XAxis, {dataKey: 'referrer', hide: true}),
-          h(R.Bar, {
-            dataKey: 'score',
-            fill: colours.bar2
-          }),
+          h(R.Bar, {dataKey: 'score'}, individualsessions.map((session, i) =>
+            h(R.Cell, {key: i, fill: referrerColour(session.referrer)})
+          )),
           h(R.Tooltip, {
             isAnimationActive: false,
             content: Tooltip
