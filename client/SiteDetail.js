@@ -45,6 +45,7 @@ module.exports = React.createClass({
           today {
             s
             v
+            b
           }
         }
       }
@@ -127,7 +128,7 @@ const Data = React.createClass({
     return (
       h('.container', [
         h('.columns', [
-          h('.column.is-half', [
+          h('.column.is-third', [
             h('.card.detail-today.has-text-left', [
               h('.card-content', [
                 h('h4.subtitle.is-4', 'Pageviews today:'),
@@ -135,7 +136,19 @@ const Data = React.createClass({
               ])
             ])
           ]),
-          h('.column.is-half', [
+          h('.column.is-third', [
+            h('.card.detail-today.has-text-centered', [
+              h('.card-content', [
+                h('h4.subtitle.is-4', 'Bounce rate today:'),
+                h('h1.title.is-1',
+                  typeof this.props.site.today.b === 'number'
+                  ? this.props.site.today.b.toFixed(2) + ' %'
+                  : '-'
+                )
+              ])
+            ])
+          ]),
+          h('.column.is-third', [
             h('.card.detail-today.has-text-right', [
               h('.card-content', [
                 h('h4.subtitle.is-4', 'Sessions today:'),
