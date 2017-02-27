@@ -1,22 +1,14 @@
 const React = require('react')
 const h = require('react-hyperscript')
-const R = require('recharts')
 const TangleText = require('react-tangle')
-const months = require('months')
 
 const snippet = require('./snippet')
 const graphql = require('./graphql')
+const formatdate = require('./helpers').formatdate
 
-const names = {
-  s: 'unique sessions',
-  v: 'all pageviews'
-}
-
-function formatdate (d) {
-  if (d) {
-    let month = months.abbr[parseInt(d.slice(4, 6)) - 1]
-    return d.slice(6) + '/' + month + '/' + d.slice(0, 4)
-  }
+const charts = {
+  Main: require('./charts/Main'),
+  SessionsByReferrer: require('./charts/SessionsByReferrer')
 }
 
 module.exports = React.createClass({
@@ -28,7 +20,7 @@ module.exports = React.createClass({
     }
   },
 
-  query () {
+  query (last) {
     graphql.query(`
       query d($code: String!, $last: Int) {
         site(code: $code, last: $last) {
@@ -53,10 +45,11 @@ module.exports = React.createClass({
           }
         }
       }
-    `, {code: this.props.match.params.code, last: this.state.nlastdays})
+    `, {code: this.props.match.params.code, last: last})
     .then(r => {
       this.setState({
         site: r.site,
+        nlastdays: last,
         dataMax: Math.max(...r.site.days.map(d => d.v))
       })
     })
@@ -64,11 +57,13 @@ module.exports = React.createClass({
   },
 
   componentDidMount () {
-    this.query()
+    this.query(45)
   },
 
   componentWillReceiveProps (nextProps) {
-    if (nextProps.match.params.code !== this.props.match.params.code) this.query()
+    if (nextProps.match.params.code !== this.props.match.params.code) {
+      this.query(this.state.nlastdays)
+    }
   },
 
   render () {
@@ -81,31 +76,12 @@ module.exports = React.createClass({
         ]),
         this.state.dataMax === 0 && this.state.site.today.v === 0
         ? h(NoData, this.state)
-        : h(Data, {...this.state, updateNLastDays: this.updateNLastDays})
+        : h(Data, {...this.state, updateNLastDays: this.query})
       ])
     )
     : h('div')
-  },
-
-  updateNLastDays (value) {
-    this.setState({nlastdays: value}, this.query)
   }
 })
-
-const CustomTooltip = function (props) {
-  return (
-    h('div.custom-tooltip', [
-      h('p.recharts-tooltip-label', formatdate(props.label)),
-      h('ul.recharts-tooltip-item-list', props.payload.map(item =>
-        h('li.recharts-tooltip-item', {style: {color: item.color}}, [
-          h('span.recharts-tooltip-item-name', names[item.name]),
-          h('span.recharts-tooltip-item-separator', ' : '),
-          h('span.recharts-tooltip-item-value', item.value)
-        ])
-      ))
-    ])
-  )
-}
 
 const Data = React.createClass({
   getInitialState () {
@@ -146,7 +122,7 @@ const Data = React.createClass({
                 h('h4.subtitle.is-4', 'Bounce rate today:'),
                 h('h1.title.is-1',
                   typeof this.props.site.today.b === 'number'
-                  ? this.props.site.today.b.toFixed(2) + ' %'
+                  ? (this.props.site.today.b * 100).toFixed(1) + '%'
                   : '-'
                 )
               ])
@@ -165,42 +141,15 @@ const Data = React.createClass({
           h('.card-header', [
             h('.card-header-title', [
               'Number of sessions and pageviews',
-              h('small', [
-                'in the last ',
-                h(TangleText, {
-                  value: this.props.nlastdays,
-                  onChange: this.props.updateNLastDays,
-                  min: 2,
-                  max: 90
-                }),
-                ' days'
-              ])
+              h(TangleChangeLastDays, this.props)
             ])
           ]),
           h('.card-image', [
             h('figure.image', [
-              h(R.ResponsiveContainer, {height: 300, width: '100%'}, [
-                h(R.ComposedChart, {data: this.props.site.days}, [
-                  h(R.XAxis, {dataKey: 'day', hide: true}),
-                  h(R.YAxis, {
-                    scale: 'linear',
-                    domain: [0, this.props.dataMax],
-                    orientation: 'right'
-                  }),
-                  h(R.Tooltip, {
-                    isAnimationActive: false,
-                    content: CustomTooltip
-                  }),
-                  h(R.Bar, {
-                    dataKey: 's',
-                    fill: '#8884d8'
-                  }),
-                  h(R.Line, {
-                    dataKey: 'v',
-                    stroke: '#82ca9d'
-                  })
-                ])
-              ])
+              h(charts.Main, {
+                site: this.props.site,
+                dataMax: this.props.dataMax
+              })
             ])
           ])
         ]),
@@ -208,38 +157,14 @@ const Data = React.createClass({
           h('.card-header', [
             h('.card-header-title', [
               'All sessions with their scores',
-              h('small', [
-                'in the last ',
-                h(TangleText, {
-                  value: this.props.nlastdays,
-                  onChange: this.props.updateNLastDays,
-                  min: 2,
-                  max: 90
-                }),
-                ' days'
-              ])
+              h(TangleChangeLastDays, this.props)
             ])
           ]),
           h('.card-image', [
             h('figure.image', [
-              h(R.ResponsiveContainer, {height: 200, width: '100%'}, [
-                h(R.BarChart, {
-                  data: this.props.site.sessionsbyreferrer.map(group =>
-                    group.scores.map(score => ({
-                      referrer: group.referrer,
-                      score: score
-                    }))
-                  ).reduce((a, b) => a.concat(b), [])
-                }, [
-                  h(R.Bar, {
-                    dataKey: 'score',
-                    fill: '#a7533e'
-                  }),
-                  h(R.Tooltip, {
-                    labelFormatter: d => d.referrer
-                  })
-                ])
-              ])
+              h(charts.SessionsByReferrer, {
+                site: this.props.site
+              })
             ])
           ])
         ]),
@@ -249,16 +174,7 @@ const Data = React.createClass({
               h('.card-header', [
                 h('.card-header-title', [
                   'Most viewed pages',
-                  h('small', [
-                    'in the last ',
-                    h(TangleText, {
-                      value: this.props.nlastdays,
-                      onChange: this.props.updateNLastDays,
-                      min: 2,
-                      max: 90
-                    }),
-                    ' days'
-                  ])
+                  h(TangleChangeLastDays, this.props)
                 ])
               ]),
               h('.card-content', [
@@ -283,16 +199,7 @@ const Data = React.createClass({
               h('.card-header', [
                 h('.card-header-title', [
                   'Top referring sites',
-                  h('small', [
-                    'in the last ',
-                    h(TangleText, {
-                      value: this.props.nlastdays,
-                      onChange: this.props.updateNLastDays,
-                      min: 2,
-                      max: 90
-                    }),
-                    ' days'
-                  ])
+                  h(TangleChangeLastDays, this.props)
                 ])
               ]),
               h('.card-content', [
@@ -405,6 +312,21 @@ const NoData = function (props) {
           ])
         ])
       ])
+    ])
+  )
+}
+
+const TangleChangeLastDays = function (props) {
+  return (
+    h('small', [
+      'in the last ',
+      h(TangleText, {
+        value: props.nlastdays,
+        onChange: props.updateNLastDays,
+        min: 2,
+        max: 90
+      }),
+      ' days'
     ])
   )
 }

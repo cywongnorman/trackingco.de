@@ -4,8 +4,10 @@ const R = require('recharts')
 const DragSource = require('react-dnd').DragSource
 const DropTarget = require('react-dnd').DropTarget
 const Link = require('react-router-dom').Link
+const color = require('color')
 
 const graphql = require('./graphql')
+const colours = require('./helpers').colours
 
 const SiteCard = React.createClass({
   getInitialState () {
@@ -77,12 +79,12 @@ const SiteCard = React.createClass({
               h(R.ComposedChart, {data: this.state.site.days}, [
                 h(R.Bar, {
                   dataKey: 's',
-                  fill: '#8884d8',
+                  fill: color(colours.bar1).lighten(0.2).string(),
                   isAnimationActive: false
                 }),
                 h(R.Line, {
                   dataKey: 'v',
-                  stroke: '#82ca9d',
+                  stroke: color(colours.line1).lighten(0.2).string(),
                   dot: false,
                   isAnimationActive: false
                 })
