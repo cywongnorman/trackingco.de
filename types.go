@@ -7,7 +7,7 @@ type Compendium struct {
 	Rev string `json:"_rev,omitempty"`
 	Day string `json:"day,omitempty"`
 	// a map of referrers to strings like "~1201020302050422"
-	// representing the number of points each visitor scored: [12, 1, 2, 3, 2, 5, 4, 22]
+	// representing the score for each visitor: [12, 1, 2, 3, 2, 5, 4, 22]
 	// each pageview is 1 point. users can track points using the JS API.
 	// the raw number of sessions is given by the sum of len(split(eachvalue, ',')).
 	Sessions map[string]string `json:"s"`
@@ -27,10 +27,9 @@ func (a EntrySort) Len() int           { return len(a) }
 func (a EntrySort) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a EntrySort) Less(i, j int) bool { return a[i].Count < a[j].Count }
 
-type IndividualSession struct {
-	Day      string `json:"day"`
-	Referrer string `json:"r"`
-	Points   int    `json:"p"`
+type SessionGroup struct {
+	Referrer string `json:"referrer"`
+	Scores   []int  `json:"scores"`
 }
 
 type User struct {

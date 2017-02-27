@@ -9,6 +9,7 @@ import (
 
 	"github.com/fjl/go-couchdb"
 	"github.com/graphql-go/graphql"
+	"github.com/kr/pretty"
 )
 
 type GraphQLRequest struct {
@@ -59,29 +60,25 @@ var entryType = graphql.NewObject(
 	},
 )
 
-var individualSessionType = graphql.NewObject(
+var sessionGroupType = graphql.NewObject(
 	graphql.ObjectConfig{
-		Name:        "IndividualSession",
-		Description: "A tuple of referrer / number of points scored by this session",
+		Name:        "SessionGroup",
+		Description: "a type {referrer, []score}",
 		Fields: graphql.Fields{
-			"day": &graphql.Field{
-				Type:        graphql.String,
-				Description: "the date in format YYYYMMDD.",
-			},
-			"r": &graphql.Field{
+			"referrer": &graphql.Field{
 				Type:        graphql.String,
 				Description: "the referrer.",
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-					addr := p.Source.(IndividualSession).Referrer
+					addr := p.Source.(SessionGroup).Referrer
 					if addr == "" {
 						return "<direct>", nil
 					}
 					return addr, nil
 				},
 			},
-			"p": &graphql.Field{
-				Type:        graphql.Int,
-				Description: "the number of points.",
+			"scores": &graphql.Field{
+				Type:        graphql.NewList(graphql.Int),
+				Description: "the score of the session.",
 			},
 		},
 	},
@@ -112,8 +109,8 @@ var compendiumType = graphql.NewObject(
 				Description: "total number of sessions.",
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 					totalsessions := 0
-					for _, pointmap := range p.Source.(Compendium).Sessions {
-						totalsessions += (len(pointmap) - 1) / 2
+					for _, scoremap := range p.Source.(Compendium).Sessions {
+						totalsessions += (len(scoremap) - 1) / 2
 					}
 					return totalsessions, nil
 				},
@@ -124,12 +121,12 @@ var compendiumType = graphql.NewObject(
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 					totalsessions := 0
 					totalbounces := 0
-					for _, pointmap := range p.Source.(Compendium).Sessions {
-						l := len(pointmap)
+					for _, scoremap := range p.Source.(Compendium).Sessions {
+						l := len(scoremap)
 						nsessions := (l - 1) / 2
 						totalsessions += nsessions
 						for s := 0; s < nsessions; s++ {
-							if l >= s*2+3 && pointmap[s*2+1:s*2+3] == "01" {
+							if l >= s*2+3 && scoremap[s*2+1:s*2+3] == "01" {
 								totalbounces += 1
 							}
 						}
@@ -180,8 +177,8 @@ var siteType = graphql.NewObject(
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 					all := make(map[string]int)
 					for _, compendium := range p.Source.(Site).couchDays {
-						for ref, pointmap := range compendium.Sessions {
-							count := (len(pointmap) - 1) / 2
+						for ref, scoremap := range compendium.Sessions {
+							count := (len(scoremap) - 1) / 2
 							if prevcount, exists := all[ref]; exists {
 								all[ref] = prevcount + count
 							} else {
@@ -227,30 +224,43 @@ var siteType = graphql.NewObject(
 					return entries, nil
 				},
 			},
-			"sessions": &graphql.Field{
-				Type:        graphql.NewList(individualSessionType),
-				Description: "a list of individual sessions, each with its day, referrer and number of points",
+			"sessionsbyreferrer": &graphql.Field{
+				Type:        graphql.NewList(sessionGroupType),
+				Description: "a list of tuples of type {referrer, []score}",
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-					var all []IndividualSession
+					byref := make(map[string][]int)
 					for _, compendium := range p.Source.(Site).couchDays {
-						for ref, pointmap := range compendium.Sessions {
-							l := len(pointmap)
+						for ref, scoremap := range compendium.Sessions {
+							if _, exists := byref[ref]; !exists {
+								byref[ref] = make([]int, 0)
+							}
+
+							l := len(scoremap)
 							nsessions := (l - 1) / 2
 							for s := 0; s < nsessions; s++ {
 								if l >= s*2+3 {
-									points, err := strconv.Atoi(pointmap[s*2+1 : s*2+3])
+									score, err := strconv.Atoi(scoremap[s*2+1 : s*2+3])
 									if err != nil {
 										continue
 									}
-									all = append(
-										all,
-										IndividualSession{compendium.Day, ref, points},
-									)
+									byref[ref] = append(byref[ref], score)
 								}
 							}
 						}
 					}
-					return all, nil
+
+					pretty.Log(byref)
+
+					sessiongroups := make([]SessionGroup, len(byref))
+					i := 0
+					for ref, sessions := range byref {
+						sessiongroups[i] = SessionGroup{ref, sessions}
+						i++
+					}
+
+					pretty.Log(sessiongroups)
+
+					return sessiongroups, nil
 				},
 			},
 			"today": &graphql.Field{
