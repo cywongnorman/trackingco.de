@@ -50,13 +50,15 @@ type Site struct {
 	Name      string `json:"name,omitempty"`
 	UserId    int    `json:"user_id,omitempty"`
 	CreatedAt string `json:"created_at,omitempty"`
+	Shared    bool   `json:"shared,omitempty"`
 
 	lastDays  int
 	couchDays []Compendium
 
-	Days   []Compendium `json:"days,omitempty" sql:"-"`
-	Months []Compendium `json:"months,omitempty" sql:"-"`
-	Today  Compendium   `json:"today,omitempty" sql:"-"`
+	ShareURL string       `json:"shareURL,omitempty" sql:"-"`
+	Days     []Compendium `json:"days,omitempty" sql:"-"`
+	Months   []Compendium `json:"months,omitempty" sql:"-"`
+	Today    Compendium   `json:"today,omitempty" sql:"-"`
 }
 
 func (_ Site) TableName() string { return "sites" }

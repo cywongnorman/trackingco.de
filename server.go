@@ -15,6 +15,7 @@ func runServer() {
 	app.Get("/", func(c *iris.Context) { c.ServeFile("landing.html", false) })
 	app.Get("/sites", serveClient)
 	app.Get("/sites/{x:[0-9a-zA-Z]+}", serveClient)
+	app.Get("/public/{x:[0-9a-zA-Z]+}", serveClient)
 
 	app.Post("/_graphql", func(c *iris.Context) {
 		var gqr GraphQLRequest

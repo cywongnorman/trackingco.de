@@ -16,12 +16,13 @@ import (
 )
 
 type Settings struct {
-	Port                    string `envconfig:"PORT"`
-	CouchURL                string `envconfig:"COUCH_URL"`
-	CouchDatabaseName       string `envconfig:"COUCH_DATABASE"`
-	RedisAddr               string `envconfig:"REDIS_ADDR"`
-	RedisPassword           string `envconfig:"REDIS_PASSWORD"`
-	PostgresURL             string `envconfig:"DATABASE_URL"`
+	Host                    string `envconfig:"HOST" required:"true"`
+	Port                    string `envconfig:"PORT" required:"true"`
+	CouchURL                string `envconfig:"COUCH_URL" required:"true"`
+	CouchDatabaseName       string `envconfig:"COUCH_DATABASE" required:"true"`
+	RedisAddr               string `envconfig:"REDIS_ADDR" required:"true"`
+	RedisPassword           string `envconfig:"REDIS_PASSWORD" required:"true"`
+	PostgresURL             string `envconfig:"DATABASE_URL" required:"true"`
 	SessionOffsetHashidSalt string `envconfig:"SESSION_OFFSET_HASHID_SALT"`
 	LoggedAs                int    `envconfig:"LOGGED_AS"`
 }

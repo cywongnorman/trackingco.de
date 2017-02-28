@@ -31,7 +31,8 @@ module.exports = React.createClass({
             // ])
           ]),
           h(Route, {exact: true, path: '/sites', component: CardsView}),
-          h(Route, {exact: true, path: '/sites/:code', component: SiteDetail})
+          h(Route, {exact: true, path: '/sites/:code', component: SiteDetail}),
+          h(Route, {exact: true, path: '/public/:code', component: SiteDetail})
         ])
       ])
     )

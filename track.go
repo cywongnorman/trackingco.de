@@ -67,7 +67,7 @@ func track(c *iris.Context) {
 	var sessioncode int
 	hi := c.Param("sessionhashid")
 
-	// try to decode (at first it may be an invalid string)
+	// try to decode (at first it should be an invalid string)
 	if offsetarr, err := hso.DecodeWithError(hi); err == nil && len(offsetarr) == 2 {
 		// success decoding, it is a _valid_ existing session
 		offset = offsetarr[0]

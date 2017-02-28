@@ -145,6 +145,17 @@ var siteType = graphql.NewObject(
 			"name":       &graphql.Field{Type: graphql.String},
 			"created_at": &graphql.Field{Type: graphql.String},
 			"user_id":    &graphql.Field{Type: graphql.String},
+			"shareURL": &graphql.Field{
+				Type:        graphql.String,
+				Description: "the URL to share this site's statistics. it is a blank string when the site is not shared.",
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					site := p.Source.(Site)
+					if site.Shared {
+						return s.Host + "/public/" + site.Code, nil
+					}
+					return "", nil
+				},
+			},
 			"days": &graphql.Field{
 				Type: graphql.NewList(compendiumType),
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
@@ -284,7 +295,7 @@ var userType = graphql.NewObject(
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 					var sites []Site
 					err = pg.Raw(`
-SELECT code, name, user_id, to_char(created_at, 'YYYYMMDD') AS created_at
+SELECT code, name, user_id, to_char(created_at, 'YYYYMMDD') AS created_at, shared
   FROM sites
   INNER JOIN (
     SELECT unnest(sites_order) AS c,
@@ -337,7 +348,8 @@ var rootQuery = graphql.ObjectConfig{
 				if err != nil {
 					return nil, err
 				}
-				if site.UserId != p.Context.Value("loggeduser").(int) {
+				if site.UserId != p.Context.Value("loggeduser").(int) /* not owner */ &&
+					!site.Shared /* not shared */ {
 					return nil, errors.New("you're not authorized to view this site.")
 				}
 
@@ -505,12 +517,37 @@ var rootMutation = graphql.ObjectConfig{
 				return Result{true}, nil
 			},
 		},
+		"shareSite": &graphql.Field{
+			Type: resultType,
+			Args: graphql.FieldConfigArgument{
+				"code": &graphql.ArgumentConfig{
+					Description: "the code of the site to set sharing",
+					Type:        graphql.String,
+				},
+				"share": &graphql.ArgumentConfig{
+					Description: "to share or to stop sharing.",
+					Type:        graphql.Boolean,
+				},
+			},
+			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				user := p.Context.Value("loggeduser").(int)
+				code := p.Args["code"].(string)
+				share := p.Args["share"].(bool)
+				err = pg.Exec(
+					`UPDATE sites SET shared = ? WHERE code = ? and user_id = ?`,
+					share, code, user)
+				if err != nil {
+					return Result{false}, err
+				}
+				return Result{true}, nil
+			},
+		},
 	},
 }
 
 func fetchSite(code string) (site Site, err error) {
 	err = pg.Model(site).
-		Select("code, name, user_id, to_char(created_at, 'YYYYMMDD') AS created_at").
+		Select("code, name, user_id, to_char(created_at, 'YYYYMMDD') AS created_at, shared").
 		Where("code = ?", code).
 		Scan(&site)
 	return site, err

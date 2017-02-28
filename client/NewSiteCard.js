@@ -14,7 +14,7 @@ module.exports = withClickOutside(React.createClass({
     }
   },
 
-  mutate () {
+  create () {
     graphql.mutate(`
       ($name: String!) {
         createSite(name: $name) {
@@ -39,7 +39,11 @@ module.exports = withClickOutside(React.createClass({
         this.state.writing
         ? h('.card-content', [
           h('form', {onSubmit: this.submit}, [
-            h('input.input', {onChange: this.write, value: this.state.name}),
+            h('input.input', {
+              onChange: this.write,
+              value: this.state.name,
+              ref: el => el.focus()
+            }),
             h('button.button.is-primary', {
               className: this.state.waiting ? 'is-loading' : ''
             }, this.state.error ? this.state.error : 'add')
@@ -61,7 +65,7 @@ module.exports = withClickOutside(React.createClass({
   submit (e) {
     e.preventDefault()
     this.setState({waiting: true})
-    this.mutate()
+    this.create()
   },
 
   handleClickOutside () {

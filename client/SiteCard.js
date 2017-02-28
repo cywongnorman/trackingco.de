@@ -23,6 +23,7 @@ const SiteCard = React.createClass({
     fragment on Site {
       name
       code
+      shareURL
       days {
         day
         s
@@ -70,7 +71,16 @@ const SiteCard = React.createClass({
               }
             })
             : h(Link, {to: `/sites/${this.state.site.code}`}, this.state.site.name)
-          ])
+          ]),
+          this.state.site.shareURL
+          ? (
+            h('p.card-header-icon', {title: 'this site is shared'}, [
+              h('span.icon', [
+                h('i.fa.fa-share-alt')
+              ])
+            ])
+          )
+          : ''
         ]),
         h('.card-image', [
           h('i.fa.fa-square-o.placeholder'),

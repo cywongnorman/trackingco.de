@@ -21,12 +21,15 @@ module.exports = React.createClass({
   },
 
   query (last) {
+    last = last || this.state.nlastdays
+
     graphql.query(`
       query d($code: String!, $last: Int) {
         site(code: $code, last: $last) {
           name
           code
           created_at
+          shareURL
           days {
             day
             s
@@ -57,7 +60,7 @@ module.exports = React.createClass({
   },
 
   componentDidMount () {
-    this.query(45)
+    this.query()
   },
 
   componentWillReceiveProps (nextProps) {
@@ -67,6 +70,8 @@ module.exports = React.createClass({
   },
 
   render () {
+    let isOwner = this.props.location.pathname.split('/')[1] === 'sites'
+
     return this.state.site
     ? (
       h('.container', [
@@ -75,15 +80,53 @@ module.exports = React.createClass({
           h('h6.subtitle.is-6', this.state.site.code)
         ]),
         this.state.dataMax === 0 && this.state.site.today.v === 0
-        ? h(NoData, this.state)
-        : h(Data, {...this.state, updateNLastDays: this.query})
+        ? isOwner
+          ? h(NoData, this.state)
+          : ''
+        : (
+          h(Data, {
+            ...this.state,
+            isOwner: isOwner,
+            updateNLastDays: this.query,
+            toggleSharing: this.toggleSharing
+          })
+        )
       ])
     )
     : h('div')
+  },
+
+  toggleSharing (e) {
+    e.preventDefault()
+    graphql.mutate(`
+      ($code: String!, $share: Boolean!) {
+        shareSite(code: $code, share: $share) {
+          ok
+        }
+      }
+    `, {code: this.state.site.code, share: !this.state.site.shareURL})
+    .then(r => {
+      if (r.shareSite.ok) {
+        this.query()
+      } else {
+        console.log('error setting site shared state.')
+      }
+    })
+    .catch(e => {
+      console.log(e.stack)
+    })
   }
 })
 
 const Data = React.createClass({
+  defaultProps: {
+    site: {},
+    dataMax: 0,
+    isOwner: false,
+    updateNLastDays: (newNLastDaysValue) => {},
+    toggleSharing: (e) => {}
+  },
+
   getInitialState () {
     return {
       pagesOpen: false,
@@ -256,7 +299,34 @@ const Data = React.createClass({
                     ]),
                     h('p.menu-label', 'Sharing'),
                     h('ul.menu-list', [
-                      h('li', 'This site is private')
+                      h('li', [
+                        h('.level', [
+                          h('.level-left', [
+                            h('.level-item', {
+                              style: {justifyContent: 'initial'}
+                            }, this.props.site.shareURL
+                              ? 'This site is public, you can share it the following URL:'
+                              : 'This site is private'
+                            )
+                          ]),
+                          this.props.isOwner && h('.level-left', [
+                            h('a.button.is-warning.is-small.is-inverted.is-outlined', {
+                              style: {display: 'inline-block'},
+                              onClick: this.props.toggleSharing
+                            }, this.props.site.shareURL
+                              ? 'Make it private'
+                              : 'Make it public and share'
+                            )
+                          ])
+                        ])
+                      ]),
+                      this.props.site.shareURL && h('li', [
+                        h('input.input', {
+                          disabled: true,
+                          value: this.props.site.shareURL,
+                          style: {marginTop: '4px'}
+                        })
+                      ])
                     ]),
                     h('p.menu-label', 'Creation date'),
                     h('ul.menu-list', [
@@ -268,7 +338,7 @@ const Data = React.createClass({
               : ''
             ])
           ]),
-          h('.column.is-half', [
+          this.props.isOwner && h('.column.is-half', [
             h('.card.detail-trackingcode', [
               h('.card-header', [
                 h('p.card-header-title', 'Tracking code'),

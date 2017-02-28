@@ -12,5 +12,6 @@ CREATE TABLE sites (
   code text primary key,
   user_id int REFERENCES users(id),
   name text,
+  shared boolean DEFAULT false,
   created_at date DEFAULT now()
 );
