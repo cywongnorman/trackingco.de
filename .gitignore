@@ -5,3 +5,4 @@
 browserify-cache.json
 node_modules
 bundle.js
+*.fasthttp.*

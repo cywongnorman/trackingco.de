@@ -7,39 +7,38 @@ import (
 	"strings"
 	"time"
 
-	"gopkg.in/kataras/iris.v6"
+	"github.com/qiangxue/fasthttp-routing"
 )
 
-func track(c *iris.Context) {
+func track(c *routing.Context) error {
 	// cors
-	c.SetHeader("Vary", "Origin")
-	c.SetHeader("Access-Control-Allow-Origin", c.RequestHeader("Origin"))
+	c.Response.Header.Add("Vary", "Origin")
+	c.Response.Header.Add("Access-Control-Allow-Origin", "*")
 
 	// no cache
-	c.SetHeader("Cache-Control", "no-cache, no-store, must-revalidate")
-	c.SetHeader("Pragma", "no-cache")
-	c.SetHeader("Expires", "0")
+	c.Response.Header.Add("Cache-Control", "no-cache, no-store, must-revalidate")
+	c.Response.Header.Add("Pragma", "no-cache")
+	c.Response.Header.Add("Expires", "0")
 
 	// tracking code
-	code := c.FormValue("c")
+	code := string(c.FormValue("c"))
 	if code == "" {
-		log.Print("didn't send tracking code.")
-		sendBlank(c)
-		return
+		return HTTPError{400, "didn't send tracking code."}
 	}
 
 	// points
-	points, err := strconv.Atoi(c.FormValue("p"))
+	points, err := strconv.Atoi(string(c.FormValue("p")))
 	if err != nil || points < 1 {
 		points = 1
 	}
 
 	// page
-	upage, err := url.Parse(c.RequestHeader("Referer"))
+	upage, err := url.Parse(string(c.Referer()))
 	if err != nil {
-		log.Print("invalid Referer: ", c.RequestHeader("Referer"), " - ", err)
-		sendBlank(c)
-		return
+		return HTTPError{
+			400,
+			"invalid Referer: " + string(c.Referer()) + " - " + err.Error(),
+		}
 	}
 	page := strings.TrimRight(upage.Path, "/")
 	if page == "" {
@@ -50,7 +49,7 @@ func track(c *iris.Context) {
 	}
 
 	// referrer
-	referrer := c.FormValue("r") // may be "". means <direct>.
+	referrer := string(c.FormValue("r")) // may be "". means <direct>.
 	if referrer != "" {
 		uref, err := url.Parse(referrer)
 		if err == nil {
@@ -100,9 +99,7 @@ func track(c *iris.Context) {
 	)
 
 	if val, err := result.Result(); err != nil {
-		log.Print("error executing track.lua: ", err)
-		sendBlank(c)
-		return
+		return HTTPError{500, "error executing track.lua: " + err.Error()}
 	} else {
 		offset = int(val.(int64))
 	}
@@ -110,17 +107,14 @@ func track(c *iris.Context) {
 	// send session to user
 	hi, err = hso.Encode([]int{offset, sessioncode})
 	if err != nil {
-		log.Print("error encoding hashid for session offset ", offset, ": ", err)
-		sendBlank(c)
-		return
+		return HTTPError{
+			500,
+			"error encoding hashid for session offset " + string(offset) + ": " + err.Error(),
+		}
 	}
 	c.SetStatusCode(200)
-	c.ResponseWriter.WriteString(hi)
+	c.SetBody([]byte(hi))
 
 	log.Print("tracked ", code, " ", referrer, " ", hi, " ", offset, " ", page)
-}
-
-func sendBlank(c *iris.Context) {
-	c.SetStatusCode(204)
-	c.ResponseWriter.WriteString("")
+	return nil
 }

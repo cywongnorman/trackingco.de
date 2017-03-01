@@ -2,44 +2,64 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 
-	"github.com/kataras/iris/adaptors/gorillamux"
-	"gopkg.in/kataras/iris.v6"
+	"github.com/qiangxue/fasthttp-routing"
+	"github.com/valyala/fasthttp"
 )
 
 func runServer() {
-	app := iris.New()
-	app.Adapt(gorillamux.New())
+	router := routing.New()
+	router.Get("/", func(c *routing.Context) error {
+		c.SendFile("landing.html")
+		return nil
+	})
+	router.Get("/sites", serveClient)
+	router.Get("/sites/<code>", serveClient)
+	router.Get("/public/<code>", serveClient)
 
-	app.Get("/", func(c *iris.Context) { c.ServeFile("landing.html", false) })
-	app.Get("/sites", serveClient)
-	app.Get("/sites/{x:[0-9a-zA-Z]+}", serveClient)
-	app.Get("/public/{x:[0-9a-zA-Z]+}", serveClient)
-
-	app.Post("/_graphql", func(c *iris.Context) {
+	router.Post("/_graphql", func(c *routing.Context) error {
 		var gqr GraphQLRequest
-		err := c.ReadJSON(&gqr)
-		if err != nil {
-			log.Print("failed to read graphql request: ", err)
+		if err = json.Unmarshal(c.Request.Body(), &gqr); err != nil {
+			return HTTPError{400, "failed to read graphql request: " + err.Error()}
 		}
-		c.SetContentType("application/json")
 		context := context.WithValue(context.TODO(), "loggeduser", s.LoggedAs)
-		err = c.JSON(200, query(gqr, context))
-		context.Done()
-		if err != nil {
-			log.Print("failed to marshal graphql response: ", err)
+		result := query(gqr, context)
+		if jsonresult, err := json.Marshal(result); err != nil {
+			return HTTPError{500, "failed to marshal graphql response: " + err.Error()}
+		} else {
+			c.SetContentType("application/json")
+			c.SetBody(jsonresult)
 		}
+		context.Done()
+		return nil
 	})
 
-	app.Get("/client/{file:.*}", func(c *iris.Context) { c.ServeFile("client/"+c.Param("file"), false) })
+	fsHandler := fasthttp.FSHandler(".", 0)
+	router.Get("/client/*", func(c *routing.Context) error {
+		fsHandler(c.RequestCtx)
+		return nil
+	})
 
-	app.Get("/{sessionhashid:[0-9a-zA-Z-]+.}.xml", track)
+	router.Get("/<sessionhashid:[0-9a-zA-Z-~^.]+>.xml", track)
 
 	log.Print("listening at :" + s.Port)
-	app.Listen(":" + s.Port)
+	panic(fasthttp.ListenAndServe(":"+s.Port, router.HandleRequest))
 }
 
-func serveClient(c *iris.Context) {
-	c.ServeFile("client/index.html", false)
+func serveClient(c *routing.Context) error {
+	c.SendFile("client/index.html")
+	return nil
+}
+
+type HTTPError struct {
+	status  int
+	message string
+}
+
+func (h HTTPError) StatusCode() int { return h.status }
+func (h HTTPError) Error() string {
+	log.Print(h.message)
+	return h.message
 }
