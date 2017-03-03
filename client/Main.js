@@ -7,12 +7,35 @@ const Link = require('react-router-dom').Link
 
 const CardsView = require('./CardsView')
 const SiteDetail = require('./SiteDetail')
+const auth0 = require('./auth').auth0
+const getLogoutURL = require('./auth').getLogoutURL
+const setToken = require('./auth').setToken
+const onLoggedStateChange = require('./auth').onLoggedStateChange
 
 module.exports = React.createClass({
   getInitialState () {
     return {
-      menuActive: false
+      isLogged: false
     }
+  },
+
+  componentDidMount () {
+    onLoggedStateChange(isLogged => {
+      this.setState({isLogged})
+    })
+
+    auth0.parseHash(location.hash, (err, result) => {
+      if (err) {
+        console.log('error parsing hash:', err)
+        setToken('')
+        return
+      }
+
+      if (result) {
+        setToken(result.idToken)
+      }
+    })
+    location.hash = ''
   },
 
   render () {
@@ -21,14 +44,19 @@ module.exports = React.createClass({
         h('div', [
           h('nav.nav', [
             h('.nav-left', [
+              h('a.nav-item', [
+                h('img', {src: '/favicon.ico', alt: 'trackingcode logo'})
+              ]),
               h('a.nav-item', 'trackingco.de')
             ]),
             h('.nav-center', [
-              h(Link, {className: 'nav-item', to: '/sites'}, 'your sites')
+              this.state.isLogged
+              ? h(Link, {className: 'nav-item', to: '/sites'}, 'your sites')
+              : h('a.nav-item', {onClick: this.login}, 'login'),
+              this.state.isLogged
+              ? h('a.nav-item', {onClick: this.logout}, 'logout')
+              : h('a.nav-item', {onClick: this.login}, 'start tracking your sites!')
             ])
-            // h('.nav-right.nav-menu', {className: menuActive ? 'is-active' : ''}, [
-            //
-            // ])
           ]),
           h(Route, {exact: true, path: '/sites', component: CardsView}),
           h(Route, {exact: true, path: '/sites/:code', component: SiteDetail}),
@@ -36,5 +64,15 @@ module.exports = React.createClass({
         ])
       ])
     )
+  },
+
+  login (e) {
+    e.preventDefault()
+    auth0.authorize()
+  },
+
+  logout (e) {
+    e.preventDefault()
+    location.href = getLogoutURL()
   }
 })

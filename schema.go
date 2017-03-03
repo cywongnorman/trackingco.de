@@ -288,8 +288,7 @@ var userType = graphql.NewObject(
 	graphql.ObjectConfig{
 		Name: "User",
 		Fields: graphql.Fields{
-			"id":   &graphql.Field{Type: graphql.Int},
-			"name": &graphql.Field{Type: graphql.String},
+			"id": &graphql.Field{Type: graphql.String},
 			"sites": &graphql.Field{
 				Type: graphql.NewList(siteType),
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
@@ -319,9 +318,11 @@ var rootQuery = graphql.ObjectConfig{
 		"me": &graphql.Field{
 			Type: userType,
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				user := User{Id: p.Context.Value("loggeduser").(int)}
+				user := User{
+					Id: userIdFromContext(p.Context),
+				}
 				err = pg.Model(user).
-					Select("id, name, email").
+					Select("id").
 					Where(user).
 					Scan(&user)
 				if err != nil {
@@ -335,7 +336,7 @@ var rootQuery = graphql.ObjectConfig{
 			Args: graphql.FieldConfigArgument{
 				"code": &graphql.ArgumentConfig{
 					Description: "a site's unique tracking code.",
-					Type:        graphql.String,
+					Type:        graphql.NewNonNull(graphql.String),
 				},
 				"last": &graphql.ArgumentConfig{
 					Description:  "number of last days to use (don't set if not requesting days, referrers or pages).",
@@ -348,7 +349,7 @@ var rootQuery = graphql.ObjectConfig{
 				if err != nil {
 					return nil, err
 				}
-				if site.UserId != p.Context.Value("loggeduser").(int) /* not owner */ &&
+				if site.UserId != userIdFromContext(p.Context) /* not owner */ &&
 					!site.Shared /* not shared */ {
 					return nil, errors.New("you're not authorized to view this site.")
 				}
@@ -393,11 +394,11 @@ var rootMutation = graphql.ObjectConfig{
 			Args: graphql.FieldConfigArgument{
 				"name": &graphql.ArgumentConfig{
 					Description: "a name to identify the site",
-					Type:        graphql.String,
+					Type:        graphql.NewNonNull(graphql.String),
 				},
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				userId := p.Context.Value("loggeduser").(int)
+				userId := userIdFromContext(p.Context)
 				code := makeCodeForUser(userId)
 				site := Site{
 					Code:   code,
@@ -430,11 +431,11 @@ var rootMutation = graphql.ObjectConfig{
 			Args: graphql.FieldConfigArgument{
 				"code": &graphql.ArgumentConfig{
 					Description: "the code of the site to rename",
-					Type:        graphql.String,
+					Type:        graphql.NewNonNull(graphql.String),
 				},
 				"name": &graphql.ArgumentConfig{
 					Description: "a new name for the site",
-					Type:        graphql.String,
+					Type:        graphql.NewNonNull(graphql.String),
 				},
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
@@ -442,7 +443,7 @@ var rootMutation = graphql.ObjectConfig{
 				if err != nil {
 					return nil, err
 				}
-				if site.UserId != p.Context.Value("loggeduser").(int) {
+				if site.UserId != userIdFromContext(p.Context) {
 					return nil, errors.New("you're not authorized to update this site.")
 				}
 				site.Name = p.Args["name"].(string)
@@ -457,18 +458,18 @@ var rootMutation = graphql.ObjectConfig{
 			Args: graphql.FieldConfigArgument{
 				"code": &graphql.ArgumentConfig{
 					Description: "the code of the site to rename",
-					Type:        graphql.String,
+					Type:        graphql.NewNonNull(graphql.String),
 				},
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				user := p.Context.Value("loggeduser").(int)
+				userId := userIdFromContext(p.Context)
 				code := p.Args["code"].(string)
 
 				tx := pg.Begin()
 
 				err = tx.Exec(
 					`DELETE FROM sites WHERE code = ? AND user_id = ?`,
-					code, user,
+					code, userId,
 				)
 				if err != nil {
 					tx.Rollback()
@@ -477,7 +478,7 @@ var rootMutation = graphql.ObjectConfig{
 
 				err = tx.Exec(
 					`UPDATE users SET sites_order = array_remove(sites_order, ?) WHERE id = ?`,
-					code, user,
+					code, userId,
 				)
 				if err != nil {
 					tx.Rollback()
@@ -501,7 +502,7 @@ var rootMutation = graphql.ObjectConfig{
 				},
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				user := p.Context.Value("loggeduser").(int)
+				userId := userIdFromContext(p.Context)
 				icodes := p.Args["order"].([]interface{})
 				codes := make([]string, len(icodes))
 				for i, icode := range icodes {
@@ -510,7 +511,7 @@ var rootMutation = graphql.ObjectConfig{
 				order := strings.Join(codes, "@^~^@")
 				err = pg.Exec(
 					`UPDATE users SET sites_order = string_to_array(?, '@^~^@') WHERE id = ?`,
-					order, user)
+					order, userId)
 				if err != nil {
 					return Result{false}, err
 				}
@@ -522,20 +523,20 @@ var rootMutation = graphql.ObjectConfig{
 			Args: graphql.FieldConfigArgument{
 				"code": &graphql.ArgumentConfig{
 					Description: "the code of the site to set sharing",
-					Type:        graphql.String,
+					Type:        graphql.NewNonNull(graphql.String),
 				},
 				"share": &graphql.ArgumentConfig{
 					Description: "to share or to stop sharing.",
-					Type:        graphql.Boolean,
+					Type:        graphql.NewNonNull(graphql.Boolean),
 				},
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				user := p.Context.Value("loggeduser").(int)
+				userId := userIdFromContext(p.Context)
 				code := p.Args["code"].(string)
 				share := p.Args["share"].(bool)
 				err = pg.Exec(
 					`UPDATE sites SET shared = ? WHERE code = ? and user_id = ?`,
-					share, code, user)
+					share, code, userId)
 				if err != nil {
 					return Result{false}, err
 				}
@@ -551,4 +552,11 @@ func fetchSite(code string) (site Site, err error) {
 		Where("code = ?", code).
 		Scan(&site)
 	return site, err
+}
+
+func userIdFromContext(ctx context.Context) string {
+	if userId, ok := ctx.Value("loggeduser").(string); ok {
+		return userId
+	}
+	return ""
 }

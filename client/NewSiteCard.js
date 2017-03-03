@@ -42,7 +42,7 @@ module.exports = withClickOutside(React.createClass({
             h('input.input', {
               onChange: this.write,
               value: this.state.name,
-              ref: el => el.focus()
+              ref: el => el && el.focus()
             }),
             h('button.button.is-primary', {
               className: this.state.waiting ? 'is-loading' : ''

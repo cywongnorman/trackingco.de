@@ -24,12 +24,17 @@ func redisKeyFactory(code, day string) func(string) string {
 	}
 }
 
-func makeCodeForUser(userId int) string {
+func makeCodeForUser(userId string) string {
+	userNumber := 0
+	for _, char := range userId {
+		userNumber += int(char)
+	}
+
 	hd := hashids.NewData()
 	hd.MinLength = 5
 	hd.Alphabet = "abcdefghijklmnopqrstuvwxyz1234567890"
 	h := hashids.NewWithData(hd)
-	r, _ := h.Encode([]int{userId, randomNumber(9999)})
+	r, _ := h.Encode([]int{userNumber, randomNumber(9999)})
 	return r
 }
 

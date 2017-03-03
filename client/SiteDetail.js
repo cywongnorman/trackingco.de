@@ -5,6 +5,7 @@ const TangleText = require('react-tangle')
 const snippet = require('./snippet')
 const graphql = require('./graphql')
 const formatdate = require('./helpers').formatdate
+const onLoggedStateChange = require('./auth').onLoggedStateChange
 
 const charts = {
   Main: require('./charts/Main'),
@@ -60,13 +61,11 @@ module.exports = React.createClass({
   },
 
   componentDidMount () {
-    this.query()
-  },
-
-  componentWillReceiveProps (nextProps) {
-    if (nextProps.match.params.code !== this.props.match.params.code) {
-      this.query(this.state.nlastdays)
-    }
+    onLoggedStateChange(isLogged => {
+      if (isLogged) {
+        this.query()
+      }
+    })
   },
 
   render () {
@@ -119,14 +118,6 @@ module.exports = React.createClass({
 })
 
 const Data = React.createClass({
-  defaultProps: {
-    site: {},
-    dataMax: 0,
-    isOwner: false,
-    updateNLastDays: (newNLastDaysValue) => {},
-    toggleSharing: (e) => {}
-  },
-
   getInitialState () {
     return {
       pagesOpen: false,

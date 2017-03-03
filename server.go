@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/qiangxue/fasthttp-routing"
 	"github.com/valyala/fasthttp"
 )
@@ -25,11 +26,16 @@ func runServer() {
 	router.Get("/public/<code>", serveClient)
 
 	router.Post("/_graphql", func(c *routing.Context) error {
+		userId := extractUserIdFromJWT(c.RequestCtx)
+		context := context.WithValue(
+			context.TODO(),
+			"loggeduser", userId,
+		)
+
 		var gqr GraphQLRequest
 		if err = json.Unmarshal(c.Request.Body(), &gqr); err != nil {
 			return HTTPError{400, "failed to read graphql request: " + err.Error()}
 		}
-		context := context.WithValue(context.TODO(), "loggeduser", s.LoggedAs)
 		result := query(gqr, context)
 		if jsonresult, err := json.Marshal(result); err != nil {
 			return HTTPError{500, "failed to marshal graphql response: " + err.Error()}
@@ -67,4 +73,30 @@ func (h HTTPError) StatusCode() int { return h.status }
 func (h HTTPError) Error() string {
 	log.Print(h.message)
 	return h.message
+}
+
+func extractUserIdFromJWT(ctx *fasthttp.RequestCtx) string {
+	jwtbytes := ctx.Request.Header.Peek("Authorization")
+	if len(jwtbytes) == 0 {
+		return ""
+	}
+
+	token, err := jwt.Parse(string(jwtbytes), func(token *jwt.Token) (interface{}, error) {
+		return []byte(s.Auth0Secret), nil
+	})
+	if err != nil {
+		log.Print("failed to parse the jwt: ", err)
+		return ""
+	}
+
+	if token.Method != jwt.SigningMethodHS256 {
+		log.Print("expected jwt signed with HS256, but got ", token.Method)
+	}
+
+	if !token.Valid {
+		log.Print("parsed jwt is invalid.")
+		return ""
+	}
+
+	return token.Claims["sub"].(string)
 }

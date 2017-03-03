@@ -7,6 +7,7 @@ const HTML5Backend = require('react-dnd-html5-backend')
 const graphql = require('./graphql')
 const SiteCard = require('./SiteCard')
 const NewSiteCard = require('./NewSiteCard')
+const onLoggedStateChange = require('./auth').onLoggedStateChange
 
 const Dashboard = React.createClass({
   getInitialState () {
@@ -32,10 +33,12 @@ const Dashboard = React.createClass({
   },
 
   componentDidMount () {
-    this.query()
+    onLoggedStateChange(isLogged => {
+      if (isLogged) {
+        this.query()
+      }
+    })
   },
-
-  componentWillReceiveProps (nextProps) {},
 
   render () {
     return (

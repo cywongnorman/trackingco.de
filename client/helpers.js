@@ -34,7 +34,7 @@ module.exports.referrerColour = function referrerColour (referrer) {
     if (smallerdistance < 3) break
   }
 
-  if (smallerdistance > 14) {
+  if (smallerdistance > 7) {
     colourCache[referrer] = randomColor()
   } else {
     colourCache[referrer] = near(colourCache[nearest], smallerdistance)

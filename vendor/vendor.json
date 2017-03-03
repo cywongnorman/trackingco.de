@@ -3,6 +3,12 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "1LWe3iDPpInibsVD1TzbTWSDXFc=",
+			"path": "github.com/dgrijalva/jwt-go",
+			"revision": "f2193411bd642f7db03249fd79d5292c9b34916a",
+			"revisionTime": "2016-02-09T19:43:28Z"
+		},
+		{
 			"checksumSHA1": "Kxjc8Efryx3C/elsRmCW/UEM7sc=",
 			"path": "github.com/fjl/go-couchdb",
 			"revision": "1f327c218d24c98ba4067e086a2787c1488ba558",

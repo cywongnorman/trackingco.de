@@ -33,10 +33,7 @@ type SessionGroup struct {
 }
 
 type User struct {
-	Id       int    `json:"id,omitempty" igor:"primary_key"`
-	Name     string `json:"name,omitempty"`
-	Email    string `json:"email,omitempty"`
-	Password string `json:"password,omitempty" sql:"-"`
+	Id string `json:"id,omitempty" igor:"primary_key"`
 
 	SitesOrder []string `json:"-" sql:"-"`
 
@@ -48,7 +45,7 @@ func (_ User) TableName() string { return "users" }
 type Site struct {
 	Code      string `json:"code,omitempty" igor:"primary_key"`
 	Name      string `json:"name,omitempty"`
-	UserId    int    `json:"user_id,omitempty"`
+	UserId    string `json:"user_id,omitempty"`
 	CreatedAt string `json:"created_at,omitempty"`
 	Shared    bool   `json:"shared,omitempty"`
 

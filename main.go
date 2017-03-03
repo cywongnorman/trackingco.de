@@ -24,7 +24,7 @@ type Settings struct {
 	RedisPassword           string `envconfig:"REDIS_PASSWORD" required:"true"`
 	PostgresURL             string `envconfig:"DATABASE_URL" required:"true"`
 	SessionOffsetHashidSalt string `envconfig:"SESSION_OFFSET_HASHID_SALT"`
-	LoggedAs                int    `envconfig:"LOGGED_AS"`
+	Auth0Secret             string `envconfig:"AUTH0_SECRET"`
 }
 
 var err error
