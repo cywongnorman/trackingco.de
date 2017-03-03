@@ -47,7 +47,7 @@ func runServer() {
 		return nil
 	})
 
-	router.Get("/<sessionhashid:[0-9a-zA-Z-~^.]+>.xml", track)
+	router.Get("/<sessionhashid:[0-9a-zA-Z-~^]+>.xml", track)
 
 	log.Print("listening at :" + s.Port)
 	panic(fasthttp.ListenAndServe(":"+s.Port, router.HandleRequest))
