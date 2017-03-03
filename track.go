@@ -13,7 +13,13 @@ import (
 func track(c *routing.Context) error {
 	// cors
 	c.Response.Header.Add("Vary", "Origin")
-	c.Response.Header.Add("Access-Control-Allow-Origin", "*")
+
+	origin := c.Request.Header.Peek("Origin")
+	if len(origin) > 0 {
+		c.Response.Header.AddBytesV("Access-Control-Allow-Origin", origin)
+	} else {
+		c.Response.Header.Add("Access-Control-Allow-Origin", "*")
+	}
 
 	// no cache
 	c.Response.Header.Add("Cache-Control", "no-cache, no-store, must-revalidate")
