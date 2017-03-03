@@ -15,6 +15,11 @@ func runServer() {
 		c.SendFile("landing.html")
 		return nil
 	})
+
+	router.Get("/favicon.ico", func(c *routing.Context) error {
+		c.SendFile("client/logo.png")
+		return nil
+	})
 	router.Get("/sites", serveClient)
 	router.Get("/sites/<code>", serveClient)
 	router.Get("/public/<code>", serveClient)
