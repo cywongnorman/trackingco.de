@@ -23,6 +23,8 @@ nav.nav {
   color: #676;
   border-bottom: 1px dashed #676 !important;
   width: 15px;
+  margin: 0 3px;
+  text-align: right !important;
 }
 
 .card.empty { border: 24px #bbb dotted; height: 285px }

@@ -25,7 +25,7 @@ const loggedSync = localsync('logged', x => x, (val, old, url) => {
     loggedEmitter.emit('logged', val)
   }
 })
-setTimeout(() => { loggedSync.start(true) }, 1)
+setTimeout(() => { loggedSync.start(false) }, 1)
 
 module.exports.setToken = function setToken (token) {
   if (token !== module.exports.getToken()) {

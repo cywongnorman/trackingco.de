@@ -237,10 +237,38 @@ var siteType = graphql.NewObject(
 			"sessionsbyreferrer": &graphql.Field{
 				Type:        graphql.NewList(sessionGroupType),
 				Description: "a list of tuples of type {referrer, []score}",
+				Args: graphql.FieldConfigArgument{
+					"limit": &graphql.ArgumentConfig{
+						Type:         graphql.Int,
+						DefaultValue: 400,
+					},
+					"minscore": &graphql.ArgumentConfig{
+						Description:  "only scores equal or greater than this number.",
+						Type:         graphql.Int,
+						DefaultValue: 0,
+					},
+					"referrer": &graphql.ArgumentConfig{
+						Description:  "only referrers with this host.",
+						Type:         graphql.String,
+						DefaultValue: "",
+					},
+				},
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					minscore, _ := p.Args["minscore"].(int)
+					referrer, filterreferrer := p.Args["referrer"].(string)
+					referrerhost := urlHost(referrer)
+					limit := p.Args["limit"].(int)
+					count := 0
+
 					byref := make(map[string][]int)
-					for _, compendium := range p.Source.(Site).couchDays {
-						for ref, scoremap := range compendium.Sessions {
+					days := p.Source.(Site).couchDays
+					for i := len(days) - 1; i >= 0; i-- { // from newest day to oldest
+						day := days[i]
+						for ref, scoremap := range day.Sessions {
+							if filterreferrer && urlHost(ref) != referrerhost {
+								continue
+							}
+
 							if _, exists := byref[ref]; !exists {
 								byref[ref] = make([]int, 0)
 							}
@@ -250,15 +278,21 @@ var siteType = graphql.NewObject(
 							for s := 0; s < nsessions; s++ {
 								if l >= s*2+3 {
 									score, err := strconv.Atoi(scoremap[s*2+1 : s*2+3])
-									if err != nil {
+									if err != nil || score < minscore {
 										continue
 									}
 									byref[ref] = append(byref[ref], score)
+									count++
+
+									if count >= limit {
+										goto finish
+									}
 								}
 							}
 						}
 					}
 
+				finish:
 					sessiongroups := make([]SessionGroup, len(byref))
 					i := 0
 					for ref, sessions := range byref {
@@ -354,22 +388,26 @@ var rootQuery = graphql.ObjectConfig{
 					return nil, errors.New("you're not authorized to view this site.")
 				}
 
-				// do we need to fetch the compendium list from couchdb or not?
+				// do we need to fetch the compendium list from couchdb?
 				site.lastDays = p.Args["last"].(int)
-				if site.lastDays > 0 {
-					res := CouchDBDayResults{}
-					yesterday := presentDay().AddDate(0, 0, -1)
-					startday := yesterday.AddDate(0, 0, -site.lastDays)
-					err := couch.AllDocs(&res, couchdb.Options{
-						"startkey":     makeBaseKey(site.Code, startday.Format(DATEFORMAT)),
-						"endkey":       makeBaseKey(site.Code, yesterday.Format(DATEFORMAT)),
-						"include_docs": true,
-					})
-					if err != nil {
-						return nil, err
-					}
-					site.couchDays = res.toCompendiumList()
+				if site.lastDays <= 0 {
+					// no.
+					return site, nil
 				}
+
+				// yes.
+				res := CouchDBDayResults{}
+				today := presentDay()
+				startday := today.AddDate(0, 0, -site.lastDays)
+				err = couch.AllDocs(&res, couchdb.Options{
+					"startkey":     makeBaseKey(site.Code, startday.Format(DATEFORMAT)),
+					"endkey":       makeBaseKey(site.Code, today.Format(DATEFORMAT)),
+					"include_docs": true,
+				})
+				if err != nil {
+					return nil, err
+				}
+				site.couchDays = res.toCompendiumList()
 
 				return site, nil
 			},

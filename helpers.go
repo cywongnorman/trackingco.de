@@ -2,6 +2,7 @@ package main
 
 import (
 	"math/rand"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -66,4 +67,14 @@ func compendiumFromRedis(code, day string) Compendium {
 	}
 
 	return compendium
+}
+
+func urlHost(full string) string {
+	if u, err := url.Parse(full); err == nil {
+		return u.Host
+	}
+	if full == "<direct>" {
+		return ""
+	}
+	return full
 }

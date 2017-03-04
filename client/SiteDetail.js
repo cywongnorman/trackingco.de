@@ -1,5 +1,6 @@
 const React = require('react')
 const h = require('react-hyperscript')
+const findDOMNode = require('react-dom').findDOMNode
 const TangleText = require('react-tangle')
 
 const snippet = require('./snippet')
@@ -17,7 +18,11 @@ module.exports = React.createClass({
     return {
       site: null,
       dataMax: 100,
-      nlastdays: 45
+      nlastdays: 45,
+      sessionsLimit: 400,
+      sessionsMinScore: 1,
+      sessionsReferrerSelected: '',
+      sessionsReferrerFilter: ''
     }
   },
 
@@ -25,31 +30,37 @@ module.exports = React.createClass({
     last = last || this.state.nlastdays
 
     graphql.query(`
-      query d($code: String!, $last: Int) {
-        site(code: $code, last: $last) {
-          name
-          code
-          created_at
-          shareURL
-          days {
-            day
-            s
-            v
-          }
-          sessionsbyreferrer {
-            referrer
-            scores
-          }
-          pages { a, c }
-          referrers { a, c }
-          today {
-            s
-            v
-            b
-          }
-        }
-      }
-    `, {code: this.props.match.params.code, last: last})
+query d($code: String!, $last: Int, $l: Int, $s: Int, $r: String) {
+  site(code: $code, last: $last) {
+    name
+    code
+    created_at
+    shareURL
+    days {
+      day
+      s
+      v
+    }
+    sessionsbyreferrer(limit: $l, minscore: $s, referrer: $r) {
+      referrer
+      scores
+    }
+    pages { a, c }
+    referrers { a, c }
+    today {
+      s
+      v
+      b
+    }
+  }
+}
+    `, {
+      code: this.props.match.params.code,
+      last: last,
+      l: this.state.sessionsLimit,
+      s: this.state.sessionsMinScore,
+      r: this.state.sessionsReferrerFilter
+    })
     .then(r => {
       this.setState({
         site: r.site,
@@ -61,6 +72,9 @@ module.exports = React.createClass({
   },
 
   componentDidMount () {
+    this.setSessionsLimit()
+    window.addEventListener('resize', this.setSessionsLimit)
+
     onLoggedStateChange(isLogged => {
       if (isLogged) {
         this.query()
@@ -87,6 +101,12 @@ module.exports = React.createClass({
             ...this.state,
             isOwner: isOwner,
             updateNLastDays: this.query,
+            updateMinScore: v => { this.setState({sessionsMinScore: v}, this.query) },
+            updateSessionsReferrerSelected: data => {
+              this.setState({sessionsReferrerSelected: data.payload.referrer})
+            },
+            filterByReferrer: this.filterByReferrer,
+            dontFilterByReferrer: this.dontFilterByReferrer,
             toggleSharing: this.toggleSharing
           })
         )
@@ -114,6 +134,25 @@ module.exports = React.createClass({
     .catch(e => {
       console.log(e.stack)
     })
+  },
+
+  setSessionsLimit () {
+    this.setState({sessionsLimit: parseInt(findDOMNode(this).offsetWidth / 5)})
+    this.query()
+  },
+
+  filterByReferrer () {
+    this.setState({
+      sessionsReferrerSelected: '',
+      sessionsReferrerFilter: this.state.sessionsReferrerSelected
+    }, this.query)
+  },
+
+  dontFilterByReferrer () {
+    this.setState({
+      sessionsReferrerSelected: '',
+      sessionsReferrerFilter: ''
+    }, this.query)
   }
 })
 
@@ -138,6 +177,10 @@ const Data = React.createClass({
     if (!this.state.referrersOpen) {
       referrers = this.props.site.referrers.slice(0, 12)
     }
+
+    let individualSessions = charts.SessionsByReferrer.sessionGroupsToIndividual(
+        this.props.site.sessionsbyreferrer
+    )
 
     return (
       h('.container', [
@@ -190,15 +233,38 @@ const Data = React.createClass({
         h('.card.detail-chart-individualsessions', [
           h('.card-header', [
             h('.card-header-title', [
-              'All sessions with their scores',
+              `${individualSessions.length} last sessions`,
+              h(TangleChangeMinScore, this.props),
               h(TangleChangeLastDays, this.props)
             ])
           ]),
           h('.card-image', [
             h('figure.image', [
               h(charts.SessionsByReferrer, {
-                site: this.props.site
+                site: this.props.site,
+                individualSessions: individualSessions,
+                handleClick: this.props.updateSessionsReferrerSelected
               })
+            ])
+          ]),
+          h('.card-content', {style: {paddingTop: '3px', paddingBottom: '5px'}}, [
+            h('.content', [
+              h('p', this.props.sessionsReferrerFilter
+                ? [
+                  'seeing sessions from ',
+                  h('b', this.props.sessionsReferrerFilter),
+                  'only, ',
+                  h('a', {onClick: this.props.dontFilterByReferrer}, 'view from all?')
+                ]
+                : this.props.sessionsReferrerSelected
+                  ? [
+                    'selected ',
+                    h('b', this.props.sessionsReferrerSelected),
+                    ', ',
+                    h('a', {onClick: this.props.filterByReferrer}, 'see sessions from this referrer only?')
+                  ]
+                  : 'click at a session bar to selected its referrer.'
+              )
             ])
           ])
         ]),
@@ -388,6 +454,22 @@ const TangleChangeLastDays = function (props) {
         max: 90
       }),
       ' days'
+    ])
+  )
+}
+
+const TangleChangeMinScore = function (props) {
+  return (
+    h('small', [
+      'with minimum ',
+      h(TangleText, {
+        value: props.sessionsMinScore,
+        onChange: props.updateMinScore,
+        pixelDistance: 40,
+        min: 1,
+        max: 99
+      }),
+      ' score'
     ])
   )
 }

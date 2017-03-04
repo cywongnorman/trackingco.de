@@ -20,13 +20,13 @@ const Dashboard = React.createClass({
 
   query () {
     graphql.query(`
-      query {
-        me {
-          sites {
-            code
-          }
-        }
-      }
+query {
+  me {
+    sites {
+      code
+    }
+  }
+}
     `)
     .then(r => this.setState(r))
     .catch(console.log.bind(console))

@@ -20,25 +20,25 @@ const SiteCard = React.createClass({
   },
 
   sitef: graphql.createFragment(`
-    fragment on Site {
-      name
-      code
-      shareURL
-      days {
-        day
-        s
-        v
-      }
-    }
+fragment on Site {
+  name
+  code
+  shareURL
+  days {
+    day
+    s
+    v
+  }
+}
   `),
 
   query () {
     graphql.query(`
-      query c($code: String!) {
-        site(code: $code, last: 7) {
-          ...${this.sitef}
-        }
-      }
+query c($code: String!) {
+  site(code: $code, last: 7) {
+    ...${this.sitef}
+  }
+}
     `, {code: this.props.code})
     .then(r => this.setState(r))
     .catch(console.log.bind(console))

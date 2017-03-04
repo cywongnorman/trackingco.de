@@ -6,27 +6,24 @@ const referrerColour = require('../helpers').referrerColour
 
 module.exports = React.createClass({
   shouldComponentUpdate (nextProps, nextState) {
-    return (this.props.site.days[0].day !== nextProps.site.days[0].day) ||
-      (this.props.site.code !== nextProps.site.code) ||
-      (this.props.site.days.length !== nextProps.site.days.length)
+    if (nextProps.site !== this.props.site) {
+      return true
+    }
+    return false
   },
 
   render () {
-    var individualsessions = this.props.site.sessionsbyreferrer.map(group =>
-      group.scores.map(score => ({
-        referrer: group.referrer,
-        score
-      }))
-    ).reduce((a, b) => a.concat(b), [])
-
     return (
       h(R.ResponsiveContainer, {height: 200, width: '100%'}, [
         h(R.BarChart, {
-          data: individualsessions,
-          barGap: '5%'
+          data: this.props.individualSessions,
+          barGap: '3%'
         }, [
           h(R.XAxis, {dataKey: 'referrer', hide: true}),
-          h(R.Bar, {dataKey: 'score'}, individualsessions.map((session, i) =>
+          h(R.Bar, {
+            dataKey: 'score',
+            onClick: this.props.handleClick
+          }, this.props.individualSessions.map((session, i) =>
             h(R.Cell, {key: i, fill: referrerColour(session.referrer)})
           )),
           h(R.Tooltip, {
@@ -54,4 +51,14 @@ const Tooltip = function (props) {
     ])
   )
   : h('div')
+}
+
+module.exports.sessionGroupsToIndividual = sessionGroupsToIndividual
+function sessionGroupsToIndividual (sessiongroups) {
+  return sessiongroups.map(group =>
+    group.scores.map(score => ({
+      referrer: group.referrer,
+      score
+    }))
+  ).reduce((a, b) => a.concat(b), [])
 }
