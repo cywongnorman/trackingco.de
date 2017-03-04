@@ -27,6 +27,9 @@ func runServer() {
 
 	router.Post("/_graphql", func(c *routing.Context) error {
 		userId := extractUserIdFromJWT(c.RequestCtx)
+		if userId == "" {
+			userId = s.LoggedAs
+		}
 		context := context.WithValue(
 			context.TODO(),
 			"loggeduser", userId,
