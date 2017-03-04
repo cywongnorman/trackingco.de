@@ -13,7 +13,7 @@ import (
 func runServer() {
 	router := routing.New()
 	router.Get("/", func(c *routing.Context) error {
-		c.SendFile("landing.html")
+		c.SendFile("client/landing.html")
 		return nil
 	})
 

@@ -1,0 +1,80 @@
+<!doctype html>
+
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link href=https://cdnjs.cloudflare.com/ajax/libs/bulma/0.3.1/css/bulma.min.css rel=stylesheet>
+<link href=/client/style.css rel=stylesheet>
+<link href=https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css rel=stylesheet>
+<title>trackingco.de</title>
+
+<body>
+  <nav class="nav">
+    <div class="nav-left">
+      <a class="nav-item"><img src=/favicon.ico alt="trackingcode logo"></a>
+      <a class="nav-item">trackingco.de</a>
+    </div>
+    <div class="nav-center">
+      <a class="nav-item" onclick="login()">login to the dashboard</a>
+      <a class="nav-item" onclick="login()">create your free account!</a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-body">
+      <div class="container">
+        <h1 class="title">
+          trackingco.de
+        </h1>
+        <h2 class="subtitle">
+          Website Analytics for real people
+        </h2>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <ul>
+        <li>only the data that matters</li>
+        <li>bypass adblockers by using your own domain</li>
+        <li>do not wait until the next day to get the statistics</li>
+        <li>share your analytics with whoever you want!</li>
+        <li>setup is as simple as it can get, ideal for multiple sites</li>
+        <li>visualize each session behavior in a glimpse, filtered by referrer</li>
+        <li>host it yourself: it's open source!</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="content has-text-centered">
+        <strong>trackingco.de</strong> by <a href="https://fiatjaf.alhur.es/">fiatjaf</a>.
+      </div>
+    </div>
+  </footer>
+</body>
+
+<script src=https://cdn.auth0.com/js/auth0/8.3.0/auth0.min.js></script>
+<script>
+var auth0 = new window.auth0.WebAuth({
+  domain: 'trackingcode.auth0.com',
+  clientID: 'bT2dkdr6IzcVgOcTD5dVuG5NLGn1qps6',
+  responseType: 'id_token',
+  redirectUri: location.protocol + '//' + location.host + '/sites'
+})
+
+function login () { auth0.authorize() }
+</script>
