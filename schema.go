@@ -160,11 +160,12 @@ var siteType = graphql.NewObject(
 				Type: graphql.NewList(compendiumType),
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 					site := p.Source.(Site)
-					days := make([]Compendium, site.lastDays+1)
+					days := make([]Compendium, site.lastDays)
 
 					// fill in missing days with zeroes
-					yesterday := presentDay().AddDate(0, 0, -1)
-					current := yesterday.AddDate(0, 0, -site.lastDays)
+					today := presentDay()
+					yesterday := today.AddDate(0, 0, -1)
+					current := today.AddDate(0, 0, -site.lastDays)
 					currentpos := 0
 					couchpos := 0
 					for !current.After(yesterday) {
