@@ -35,6 +35,7 @@ var hso *hashids.HashID
 var rds *redis.Client
 var couch *couchdb.DB
 var tracklua string
+var blacklist map[string]bool
 
 func main() {
 	err = envconfig.Process("", &s)
@@ -80,6 +81,10 @@ func main() {
 		}
 	}
 	tracklua = string(btracklua)
+
+	// referrer blacklist
+	blacklist = buildReferrerBlacklist()
+	log.Print("using referrer blacklist with ", len(blacklist), " entries.")
 
 	// run routines or start the server
 	if len(os.Args) == 1 {

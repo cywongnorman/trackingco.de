@@ -59,6 +59,20 @@ func track(c *routing.Context) error {
 	if referrer != "" {
 		uref, err := url.Parse(referrer)
 		if err == nil {
+			// verify if referrer is on blacklist
+			if _, blacklisted := blacklist[uref.Host]; blacklisted {
+				log.Print("referrer on blacklist: ", uref.Host)
+
+				// send fake/invalid hashid to spammer
+				if hi, err := hso.Encode([]int{-1, randomNumber(999), randomNumber(99), 37}); err == nil {
+					c.SetStatusCode(200)
+					c.SetBody([]byte(hi))
+					return nil
+				} else {
+					return HTTPError{500, "error encoding fake hashid: " + err.Error()}
+				}
+			}
+
 			uref.Path = strings.TrimRight(uref.Path, "/") // strip ending slashes
 			if uref.Path == "" {
 				uref.Path = "/"

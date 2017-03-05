@@ -4,9 +4,12 @@ import (
 	"math/rand"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/speps/go-hashids"
+	"github.com/valyala/fasthttp"
 )
 
 const DATEFORMAT = "20060102"
@@ -77,4 +80,41 @@ func urlHost(full string) string {
 		return ""
 	}
 	return full
+}
+
+func buildReferrerBlacklist() map[string]bool {
+	refmap := make(map[string]bool)
+
+	lines := ""
+	lines += doRequest("https://raw.githubusercontent.com/ddofborg/analytics-ghost-spam-list/master/adwordsrobot.com-spam-list.txt")
+	lines += "\n"
+	lines += doRequest("https://raw.githubusercontent.com/piwik/referrer-spam-blacklist/master/spammers.txt")
+
+	for _, line := range strings.Split(lines, "\n") {
+		refmap[strings.TrimSpace(line)] = true
+	}
+
+	if doc, err := goquery.NewDocument("https://referrerspamblocker.com/blacklist"); err == nil {
+		doc.Find(".blacklist li").Each(func(i int, s *goquery.Selection) {
+			refmap[strings.TrimSpace(s.Text())] = true
+		})
+	}
+
+	return refmap
+}
+
+func doRequest(u string) string {
+	req := fasthttp.AcquireRequest()
+	req.SetRequestURI(u)
+
+	resp := fasthttp.AcquireResponse()
+	client := &fasthttp.Client{
+		Name: "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/56.0.2924.76 Chrome/56.0.2924.76 Safari/537.36",
+	}
+	err := client.DoTimeout(req, resp, time.Second*25)
+	if err != nil {
+		return ""
+	}
+
+	return string(resp.Body())
 }
