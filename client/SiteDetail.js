@@ -450,6 +450,7 @@ const TangleChangeLastDays = function (props) {
       h(TangleText, {
         value: props.nlastdays,
         onChange: props.updateNLastDays,
+        pixelDistance: 15,
         min: 2,
         max: 90
       }),
