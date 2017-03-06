@@ -363,33 +363,26 @@ const Data = React.createClass({
                     ]),
                     h('p.menu-label', 'Sharing'),
                     h('ul.menu-list', [
-                      h('li', [
-                        h('.level', [
-                          h('.level-left', [
-                            h('.level-item', {
-                              style: {justifyContent: 'initial'}
-                            }, this.props.site.shareURL
-                              ? 'This site is public, you can share it the following URL:'
-                              : 'This site is private'
-                            )
-                          ]),
-                          this.props.isOwner && h('.level-left', [
-                            h('a.button.is-warning.is-small.is-inverted.is-outlined', {
-                              style: {display: 'inline-block'},
-                              onClick: this.props.toggleSharing
-                            }, this.props.site.shareURL
-                              ? 'Make it private'
-                              : 'Make it public and share'
-                            )
-                          ])
-                        ])
-                      ]),
+                      h('li', this.props.site.shareURL
+                        ? 'This site is public, you can share it the following URL:'
+                        : 'This site is private'
+                      ),
                       this.props.site.shareURL && h('li', [
                         h('input.input', {
                           disabled: true,
                           value: this.props.site.shareURL,
                           style: {marginTop: '4px'}
                         })
+                      ]),
+                      this.props.isOwner &&
+                      h('li', [
+                        h('a.button.is-warning.is-small.is-inverted.is-outlined', {
+                          style: {display: 'inline-block'},
+                          onClick: this.props.toggleSharing
+                        }, this.props.site.shareURL
+                          ? 'Make it private'
+                          : 'Make it public and share'
+                        )
                       ])
                     ]),
                     h('p.menu-label', 'Creation date'),
