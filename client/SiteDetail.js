@@ -2,6 +2,7 @@ const React = require('react')
 const h = require('react-hyperscript')
 const findDOMNode = require('react-dom').findDOMNode
 const TangleText = require('react-tangle')
+const throttle = require('throttleit')
 
 const snippet = require('./snippet')
 const graphql = require('./graphql')
@@ -82,6 +83,10 @@ query d($code: String!, $last: Int, $l: Int, $s: Int, $r: String) {
     })
   },
 
+  componentWillUnmount () {
+    window.removeEventListener('resize', this.setSessionsLimit)
+  },
+
   render () {
     let isOwner = this.props.location.pathname.split('/')[1] === 'sites'
 
@@ -136,10 +141,12 @@ query d($code: String!, $last: Int, $l: Int, $s: Int, $r: String) {
     })
   },
 
-  setSessionsLimit () {
-    this.setState({sessionsLimit: parseInt(findDOMNode(this).offsetWidth / 5)})
-    this.query()
-  },
+  setSessionsLimit: throttle(function (e) {
+    let sessionsLimit = parseInt(findDOMNode(this).offsetWidth / 5)
+    if (sessionsLimit === this.state.sessionsLimit) return
+
+    this.setState({sessionsLimit: sessionsLimit}, this.query)
+  }, 1000),
 
   filterByReferrer () {
     this.setState({
