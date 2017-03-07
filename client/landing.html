@@ -7,7 +7,7 @@
 <link href=https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css rel=stylesheet>
 <title>trackingco.de</title>
 
-<body>
+<body id="landing">
   <nav class="nav">
     <div class="nav-left">
       <a class="nav-item"><img src=/favicon.ico alt="trackingcode logo"></a>
@@ -18,50 +18,242 @@
       <a class="nav-item" onclick="login()">create your free account!</a>
     </div>
   </nav>
-
-  <section class="hero">
-    <div class="hero-body">
-      <div class="container">
-        <h1 class="title">
-          trackingco.de
-        </h1>
-        <h2 class="subtitle">
-          Website Analytics for real people
-        </h2>
+  <section class="alt">
+    <div class="container">
+      <div class="columns is-multiline">
+        <div class="column is-10 is-offset-1">
+          <h1 class="title">
+            <b>Simple</b>, powerful <i>but not unlimited</i>, <b>cheap</b> web analytics.
+          </h1>
+        </div>
+        <div class="column is-12">
+          <figure class="image">
+            <img src="/client/images/dashboard.png">
+          </figure>
+        </div>
+        <div class="column is-10 is-offset-1">
+          <div class="content">
+            <p>Are you tired of Google Analytics?
+            <ul>
+              <li>With all its configurations, admin screens, users configuration, reporting sections, heavy charts?</li>
+              <li>Are you tired of referrer spam, of the fact that web analytics don't work with adblockers?</li>
+              <li>Do you run multiple websites and just want to track simple metrics?</li>
+              <li>Is it true for you that segmentation based on browser, country, search terms or social media are somewhat useless features?</li>
+              <li>Do you want to see a quick summary of each individual visitor of your site?</li>
+              <li>Have you looked up and found that all Google Analytics competitors are too expensive?</li>
+            </ul>
+            <p>Well, if you answered "yes" to any of the previous questions, than maybe <b>trackingco.de</b> is for you.</p>
+          </div>
+        </div>
       </div>
     </div>
   </section>
-
-  <section class="section">
+  <section>
     <div class="container">
-      
+      <div class="columns is-multiline">
+        <div class="column is-10 is-offset-1">
+          <h3 class="title">Our unique features</h3>
+        </div>
+      </div>
+      <div class="tile is-ancestor">
+        <div class="tile is-vertical is-6">
+          <div class="tile is-parent">
+            <div class="tile is-child">
+              <div class="box">
+                <h4 class="title is-4">only the data that matters</h4>
+                <figure class="image">
+                  <img src="/client/images/basics.png">
+                </figure>
+                <small>You don't need any special skills to just see how many people are visiting your site.</small>
+              </div>
+            </div>
+          </div>
+          <div class="tile">
+            <div class="tile is-parent">
+              <div class="tile is-child">
+                <div class="box">
+                  <h4 class="title is-4">bypass adblockers by using your own domain</h4>
+                  <small>If you use <a href="https://blog.cloudflare.com/introducing-universal-ssl/" target="_blank">Cloudflare Universal SSL</a> and register your domain to your <b>trackingco.de</b> account you can use it instead of our default tracking domain to submit data.</small>
+                  <small><i>de facto</i> whitelabelling.</small>
+                </div>
+              </div>
+            </div>
+            <div class="tile is-parent is-vertical">
+              <div class="tile is-child">
+                <div class="box ui-colors">
+                  <h4 class="title is-4">you can change the UI colors</h4>
+                  <small>Isn't it nice to have the rainbow in your hands?</small>
+                </div>
+              </div>
+              <div class="tile is-child">
+                <div class="box">
+                  <h4 class="title is-4">host it yourself: it's open source!</h4>
+                  <small>check it out on <a href="https://github.com/fiatjaf/trackingco.de">GitHub</a>!</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="tile is-6 is-vertical">
+          <div class="tile">
+            <div class="tile is-parent is-vertical">
+              <div class="tile is-child">
+                <div class="box">
+                  <h4 class="title is-4">share your data with whomever you want!</h4>
+                  <small title="There's also the option to share privately to selected accounts.">Make individual sites public, and other people may see them without having to register! (and if they have an account they even add the shared site to their dashboard!)</small>
+                </div>
+              </div>
+              <div class="tile is-child">
+                <div class="box">
+                  <h4 class="title is-4">GraphQL API</h4>
+                  <small>Are you a developer?</small>
+                </div>
+              </div>
+            </div>
+            <div class="tile is-parent is-vertical">
+              <div class="tile is-child">
+                <div class="box">
+                  <h4 class="title is-4">your data is not owned by Google</h4>
+                  <small>It's in your hands, and you can export it when you want!</small>
+                </div>
+              </div>
+              <div class="tile is-child">
+                <div class="box">
+                  <h4 class="title is-4">setup is as simple as it can get, ideal for multiple sites</h4>
+                  <small>Click a <span class="icon"><i class="fa fa-plus"></i></span> button, give a name to the site and it's done, you get a tracking code to install on your HTML.</small>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="tile is-parent">
+            <div class="tile is-child">
+              <div class="box">
+                <h4 class="title is-4">visualize each session behavior in a glimpse</h4>
+                <small>Each visitor is recorded along with the referrer through which he came and a number of points. By default these points correspond to the number of pages visited, but you can use them for simple conversion tracking.</small>
+                <figure class="image">
+                  <img src="/client/images/sessions.png">
+                </figure>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
-
-  <section class="section">
+  <section class="alt">
     <div class="container">
-      <ul>
-        <li>only the data that matters</li>
-        <li>bypass adblockers by using your own domain</li>
-        <li>do not wait until the next day to get the statistics</li>
-        <li>share your analytics with whoever you want!</li>
-        <li>setup is as simple as it can get, ideal for multiple sites</li>
-        <li>visualize each session behavior in a glimpse, filtered by referrer</li>
-        <li>host it yourself: it's open source!</li>
-      </ul>
+      <div class="columns is-multiline">
+        <div class="column is-10 is-offset-1">
+          <h3 class="title">Why is <b>trackingco.de</b> so good?</h3>
+          <div class="content">
+            <p>It is a fair question to raise -- not in the way it is formulated, assuming our service is actually good, but more in the likes of <b>why isn't any other service that provides all you do for such a small price?</b></p>
+            <p>Well, there could be tons of web analytics as a service out there, as there are tons of services for many common tasks people of the internet face, most of them are free or have a free tier, and many of them very good. For web analytics, however, this is not so easy. Web analytics requires at least a database that takes lots of disk space. These things are not as cheap as a normal webserver with a database of only a handful items for each person using the app.</p>
+            <p><b>trackingco.de</b> does nothing too different here. It only stores the data in a compacted format, but yet in a database from where it can be indexed and served. That seems to work very well, and we found a solution that allows us to offer some advanced features, but still not take too much disk space. Of course, we're still unable to offer some of the fancy features some of our competitors do, but most web analytics users aren't going to need those anyway.</p>
+          </div>
+        </div>
+        <div class="column is-10 is-offset-1">
+          <h3 class="title">Which features are missing?</h3>
+          <div class="content">
+            <p>Although <b>trackingco.de</b> is great, it is not the not the definitive web analytics tool that will solve all the problems. If you're relying on
+            <ul>
+              <li>geolocation (tagging visitors by country, city etc.);</li>
+              <li>browser or operating system usage statistics;</li>
+              <li>screen sizes measurements;</li>
+              <li>very specific conversion/goal tracking; or</li>
+              <li>A/B testing (split-tests)</li>
+            </ul>
+            Then you probably shouldn't use our services.
+            </p>
+          </div>
+      </div>
     </div>
   </section>
-
-  <section class="section">
+  <section>
     <div class="container">
-      
+      <div class="columns is-multiline">
+        <div class="column is-12">
+          <h3 class="title">Monthly Pricing</h3>
+        </div>
+        <div class="column is-4">
+          <div class="box pricing">
+            <table class="table">
+              <tr><td><h2 class="title is-2"><b>$5</b></h2></td></tr>
+              <tr><td>unlimited sites</td></tr>
+              <tr><td>100,000 pageviews each month</td></tr>
+              <tr><td>you can share your sites publicly</td></tr>
+            </table>
+          </div>
+        </div>
+        <div class="column is-4">
+          <div class="box pricing">
+            <table class="table">
+              <tr><td><h2 class="title is-2"><b>$10</b></h2></td></tr>
+              <tr><td>unlimited sites</td></tr>
+              <tr><td>250,000 pageviews</td></tr>
+              <tr><td>everything in the previous plan</td></tr>
+              <tr><td>you can use your own domain</td></tr>
+            </table>
+          </div>
+        </div>
+        <div class="column is-4">
+          <div class="box pricing">
+            <table class="table">
+              <tr><td><h2 class="title is-2"><b>$50</b></h2></td></tr>
+              <tr><td>unlimited sites</td></tr>
+              <tr><td>1,000,000 pageviews</td></tr>
+              <tr><td>everything in the previous plan</td></tr>
+              <tr><td>you can share your sites privately</td></tr>
+            </table>
+          </div>
+        </div>
+        <div class="column is-6 is-offset-3">
+          <div class="box signup">
+            <form>
+              <p class="control has-icon">
+                <input class="input" type="email" placeholder="Email">
+                <span class="icon is-small">
+                  <i class="fa fa-envelope"></i>
+                </span>
+              </p>
+              <p class="control has-icon">
+                <input class="input" type="text" placeholder="Username" title="optional, you'll be able to use this for logging in, but you'll also be able to use your email.">
+                <span class="icon is-small">
+                  <i class="fa fa-user"></i>
+                </span>
+              </p>
+              <p class="control has-icon">
+                <input class="input" type="password" placeholder="Password">
+                <span class="icon is-small">
+                  <i class="fa fa-lock"></i>
+                </span>
+              </p>
+              <div class="level">
+                <div class="level-left">
+                  <div class="level-item"><button class="button">Sign up now</button></div>
+                </div>
+                <div class="level-left">
+                  <div class="level-item">
+                    or use these:&nbsp;&nbsp;
+                    <span class="icon"><a><i class="fa fa-github"></i></a></span>
+                    <span class="icon"><a><i class="fa fa-google"></i></a></span>
+                    <span class="icon"><a><i class="fa fa-bitbucket"></i></a></span>
+                  </div>
+                </div>
+              </p>
+            </form>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
-
   <footer class="footer">
     <div class="container">
-      <div class="content has-text-centered">
-        <strong>trackingco.de</strong> by <a href="https://fiatjaf.alhur.es/">fiatjaf</a>.
+      <div class="content is-pulled-left">
+        © <a href="https://fiatjaf.alhur.es/">fiatjaf</a> 2017
+      </div>
+      <div class="content is-pulled-right">
+        <a href="/terms">terms of service</a> / 
+        <a href="/privacy">privacy policy</a>
       </div>
     </div>
   </footer>
@@ -73,6 +265,7 @@ var auth0 = new window.auth0.WebAuth({
   domain: 'trackingcode.auth0.com',
   clientID: 'bT2dkdr6IzcVgOcTD5dVuG5NLGn1qps6',
   responseType: 'id_token',
+  scope: 'openid',
   redirectUri: location.protocol + '//' + location.host + '/sites'
 })
 
