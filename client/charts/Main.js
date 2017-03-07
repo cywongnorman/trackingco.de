@@ -32,7 +32,9 @@ module.exports = React.createClass({
           }),
           h(R.Line, {
             dataKey: 'v',
-            stroke: colours.line1
+            stroke: colours.line1,
+            type: 'monotone',
+            strokeWidth: 1
           })
         ])
       ])

@@ -189,6 +189,8 @@ const Data = React.createClass({
         this.props.site.sessionsbyreferrer
     )
 
+    let totalSessions = this.props.site.referrers.map(({c: count}) => count).reduce((a, b) => a + b, 0)
+
     return (
       h('.container', [
         h('.columns', [
@@ -240,8 +242,9 @@ const Data = React.createClass({
         h('.card.detail-chart-individualsessions', [
           h('.card-header', [
             h('.card-header-title', [
-              `${individualSessions.length} last sessions`,
+              `showing ${individualSessions.length} sessions `,
               h(TangleChangeMinScore, this.props),
+              ` from a total of ${totalSessions} `,
               h(TangleChangeLastDays, this.props)
             ])
           ]),

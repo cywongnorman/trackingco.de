@@ -1,13 +1,13 @@
 const React = require('react')
 const h = require('react-hyperscript')
-const R = require('recharts')
 const DragSource = require('react-dnd').DragSource
 const DropTarget = require('react-dnd').DropTarget
 const Link = require('react-router-dom').Link
-const color = require('color')
 
 const graphql = require('./graphql')
-const colours = require('./helpers').colours
+const charts = {
+  Card: require('./charts/Card')
+}
 
 const SiteCard = React.createClass({
   getInitialState () {
@@ -75,7 +75,7 @@ query c($code: String!) {
           this.state.site.shareURL
           ? (
             h('p.card-header-icon', {title: 'this site is shared'}, [
-              h('span.icon', [
+              h('a.icon', [
                 h('i.fa.fa-share-alt')
               ])
             ])
@@ -85,21 +85,7 @@ query c($code: String!) {
         h('.card-image', [
           h('i.fa.fa-square-o.placeholder'),
           h('figure.image', [
-            h(R.ResponsiveContainer, {height: 200, width: '100%'}, [
-              h(R.ComposedChart, {data: this.state.site.days}, [
-                h(R.Bar, {
-                  dataKey: 's',
-                  fill: color(colours.bar1).lighten(0.2).string(),
-                  isAnimationActive: false
-                }),
-                h(R.Line, {
-                  dataKey: 'v',
-                  stroke: color(colours.line1).lighten(0.2).string(),
-                  dot: false,
-                  isAnimationActive: false
-                })
-              ])
-            ])
+            h(charts.Card, this.state)
           ])
         ]),
         h('.card-footer', this.state.deleting
