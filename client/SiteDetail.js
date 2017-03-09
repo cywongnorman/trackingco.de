@@ -449,21 +449,50 @@ const Data = React.createClass({
   }
 })
 
-const NoData = function (props) {
-  return (
-    h('.card.detail-trackingcode', [
-      h('.card-content', [
-        h('.content', [
-          h('p', 'This site has no data yet. Have you installed the tracking code?'),
-          h('p', 'Just paste the following in any part of your site:'),
-          h('pre', [
-            h('code', `<script>;${snippet(props.site.code)};</script>`)
+const NoData = React.createClass({
+  defaultDomain: 't.trackingco.de',
+
+  getInitialState () {
+    return {
+      domain: this.defaultDomain
+    }
+  },
+
+  componentWillMount () {
+    if (this.props.me.domains.length) {
+      this.setState({domain: this.props.me.domains[0]})
+    }
+  },
+
+  render () {
+    return (
+      h('.card.detail-trackingcode', [
+        h('.card-content', [
+          h('.content', [
+            h('p', 'This site has no data yet. Have you installed the tracking code?'),
+            h('p', 'Just paste the following in any part of your site:'),
+            h('pre', [
+              h('code', `<script>;${snippet(this.props.site.code, this.state.domain)};</script>`)
+            ]),
+            h('.level', {style: {marginTop: '14px'}}, [
+              h('.level-left', [
+                'Use a different domain: ',
+                h('span.select', {style: {marginLeft: '11px'}}, [
+                  h('select', {
+                    onChange: e => this.setState({domain: e.target.value}),
+                    value: this.state.domain
+                  }, this.props.me.domains.concat(this.defaultDomain).map(hostname =>
+                    h('option', hostname)
+                  ))
+                ])
+              ])
+            ])
           ])
         ])
       ])
-    ])
-  )
-}
+    )
+  }
+})
 
 const TangleChangeLastDays = function (props) {
   return (
