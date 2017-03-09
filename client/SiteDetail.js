@@ -6,6 +6,7 @@ const throttle = require('throttleit')
 const DocumentTitle = require('react-document-title')
 const BodyStyle = require('body-style')
 
+const log = require('./log')
 const snippet = require('./snippet')
 const graphql = require('./graphql')
 const formatdate = require('./helpers').formatdate
@@ -78,7 +79,7 @@ query d($code: String!, $last: Int, $l: Int, $s: Int, $r: String) {
         dataMax: Math.max(...r.site.days.map(d => d.v))
       })
     })
-    .catch(console.log.bind(console))
+    .catch(log.error)
   },
 
   componentDidMount () {
@@ -133,23 +134,23 @@ query d($code: String!, $last: Int, $l: Int, $s: Int, $r: String) {
 
   toggleSharing (e) {
     e.preventDefault()
+
     graphql.mutate(`
 ($code: String!, $share: Boolean!) {
   shareSite(code: $code, share: $share) {
-    ok
+    ok, error
   }
 }
     `, {code: this.state.site.code, share: !this.state.site.shareURL})
     .then(r => {
-      if (r.shareSite.ok) {
-        this.query()
-      } else {
-        console.log('error setting site shared state.')
+      if (!r.shareSite.ok) {
+        log.error('error setting shared state:', r.shareSite.error)
+        return
       }
+      log.info(`${this.props.site.name} is now ${!this.state.site.shareURL ? 'un' : ''}shared.`)
+      this.query()
     })
-    .catch(e => {
-      console.log(e.stack)
-    })
+    .catch(log.error)
   },
 
   setSessionsLimit: throttle(function (e) {

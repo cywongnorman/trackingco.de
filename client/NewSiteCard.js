@@ -2,6 +2,7 @@ const React = require('react')
 const withClickOutside = require('react-click-outside')
 const h = require('react-hyperscript')
 
+const log = require('./log')
 const graphql = require('./graphql')
 
 module.exports = withClickOutside(React.createClass({
@@ -9,8 +10,7 @@ module.exports = withClickOutside(React.createClass({
     return {
       name: '',
       writing: false,
-      waiting: false,
-      error: null
+      waiting: false
     }
   },
 
@@ -23,13 +23,11 @@ module.exports = withClickOutside(React.createClass({
       }
     `, {name: this.state.name})
     .then(r => {
+      log.success(this.state.name, 'created! You can start tracking it.')
       this.props.onNewSiteCreated()
       this.setState(this.getInitialState())
     })
-    .catch(e => {
-      console.log(e.stack)
-      this.setState({waiting: false, error: 'failed, please try again.'})
-    })
+    .catch(log.error)
   },
 
   render () {
@@ -46,7 +44,7 @@ module.exports = withClickOutside(React.createClass({
             }),
             h('button.button.is-primary', {
               className: this.state.waiting ? 'is-loading' : ''
-            }, this.state.error ? this.state.error : 'add')
+            }, 'add')
           ])
         ])
         : h('i.fa.fa-plus')

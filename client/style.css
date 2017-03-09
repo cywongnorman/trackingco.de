@@ -110,7 +110,7 @@ nav.nav {
 .custom-tooltip .recharts-tooltip-item-list { text-align: right; }
 
 .card.account-colours .colours > div { display: inline-block }
-.card.account-colours .colours > div:not(:first-child) { margin-left: 5px }
+.card.account-colours .colours > div:not(:last-child) { margin-right: 5px }
 .card.account-colours .twitter-picker {
   position: absolute !important;
   z-index: 12;

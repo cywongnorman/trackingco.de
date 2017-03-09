@@ -6,6 +6,7 @@ const randomColor = require('randomcolor')
 const DocumentTitle = require('react-document-title')
 const BodyStyle = require('body-style')
 
+const log = require('./log')
 const graphql = require('./graphql')
 const mergeColours = require('./helpers').mergeColours
 const coloursfragment = require('./helpers').coloursfragment
@@ -30,7 +31,7 @@ query {
 }
     `)
     .then(r => this.setState(r))
-    .catch(console.log.bind(console))
+    .catch(log.error)
   },
 
   componentDidMount () {
@@ -152,7 +153,7 @@ query {
     `, {colours: {...this.state.me.colours, ...{[field]: colour}}})
     .then(r => {
       if (!r.setColours.ok) {
-        console.log('failed to setColours:', r.setColours.error)
+        log.error('failed to setColours:', r.setColours.error)
         return
       }
       this.setState(st => {
@@ -160,9 +161,7 @@ query {
         return st
       })
     })
-    .catch(e => {
-      console.log(e.stack)
-    })
+    .catch(log.error)
   },
 
   addDomain (e) {
@@ -178,14 +177,13 @@ query {
     `, {hostname})
     .then(r => {
       if (!r.addDomain.ok) {
-        console.log('error adding domain: ', r.addDomain.error)
+        log.error('error adding domain: ', r.addDomain.error)
         return
       }
+      log.info(hostname, 'added.')
       this.query()
     })
-    .catch(e => {
-      console.log(e.stack)
-    })
+    .catch(log.error)
   },
 
   removeDomain (e, host) {
@@ -200,14 +198,13 @@ query {
     `, {host})
     .then(r => {
       if (!r.removeDomain.ok) {
-        console.log('error removing domain:', r.removeDomain.error)
-      } else {
-        this.query()
+        log.error('error removing domain:', r.removeDomain.error)
+        return
       }
+      log.info(host, 'removed.')
+      this.query()
     })
-    .catch(e => {
-      console.log(e.stack)
-    })
+    .catch(log.error)
   }
 })
 

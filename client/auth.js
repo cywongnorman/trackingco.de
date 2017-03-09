@@ -2,6 +2,8 @@ const Auth0 = window.auth0
 const localsync = require('localsync').default
 const Emitter = require('tiny-emitter')
 
+const log = require('./log')
+
 let auth0options = {
   domain: 'trackingcode.auth0.com',
   clientID: 'bT2dkdr6IzcVgOcTD5dVuG5NLGn1qps6',
@@ -21,7 +23,7 @@ module.exports.getLogoutURL = function () {
 const loggedEmitter = new Emitter()
 const loggedSync = localsync('logged', x => x, (val, old, url) => {
   if (val !== old) {
-    console.log(`another tab at ${url} has changed logged state from ${old} to ${val}.`)
+    log.debug(`another tab at ${url} has changed logged state from ${old} to ${val}.`)
     loggedEmitter.emit('logged', val)
   }
 })

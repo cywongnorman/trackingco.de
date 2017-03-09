@@ -660,7 +660,7 @@ var rootMutation = graphql.ObjectConfig{
 						// ok, that's good.
 					} else {
 						log.Print("failed to add domain ", host, " ", resp)
-						return Result{false, err.Error()}, nil
+						return Result{false, resp.Message}, nil
 					}
 				}
 
@@ -694,7 +694,7 @@ var rootMutation = graphql.ObjectConfig{
 						// ok, that's good.
 					} else {
 						log.Print("failed to remove domain ", host, " ", resp)
-						return Result{false, err.Error()}, nil
+						return Result{false, resp.Message}, nil
 					}
 				}
 

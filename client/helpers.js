@@ -52,7 +52,6 @@ module.exports.referrerColour = function referrerColour (referrer) {
   var nearest = ''
   for (var cachedReferrer in colourCache) {
     let distance = levenshtein(referrer, cachedReferrer)
-    console.log(referrer, 'to', cachedReferrer, ':', distance)
     if (distance < nearest) {
       smallerdistance = distance
       nearest = cachedReferrer

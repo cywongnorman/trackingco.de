@@ -6,6 +6,7 @@ const HTML5Backend = require('react-dnd-html5-backend')
 const DocumentTitle = require('react-document-title')
 const BodyStyle = require('body-style')
 
+const log = require('./log')
 const graphql = require('./graphql')
 const SiteCard = require('./SiteCard')
 const NewSiteCard = require('./NewSiteCard')
@@ -32,7 +33,7 @@ query {
 }
     `)
     .then(r => this.setState(r))
-    .catch(console.log.bind(console))
+    .catch(log.error)
   },
 
   componentDidMount () {
@@ -90,18 +91,13 @@ query {
     let order = this.state.me.sites.map(s => s.code)
 
     graphql.mutate(`
-      ($order: [String]!) {
-        changeSiteOrder(order: $order) {
-          ok
-        }
-      }
+($order: [String]!) {
+  changeSiteOrder(order: $order) {
+    ok
+  }
+}
     `, {order: order})
-    .then(r => {
-      console.log(r)
-    })
-    .catch(e => {
-      console.log(e.stack)
-    })
+    .catch(log.error)
   },
 
   removeSiteFromScreen (code) {

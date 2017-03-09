@@ -4,6 +4,7 @@ const DragSource = require('react-dnd').DragSource
 const DropTarget = require('react-dnd').DropTarget
 const Link = require('react-router-dom').Link
 
+const log = require('./log')
 const graphql = require('./graphql')
 const coloursfragment = require('./helpers').coloursfragment
 const charts = {
@@ -47,7 +48,7 @@ query c($code: String!) {
 }
     `, {code: this.props.code})
     .then(r => this.setState(r))
-    .catch(console.log.bind(console))
+    .catch(log.error)
   },
 
   componentDidMount () {
@@ -137,10 +138,7 @@ query c($code: String!) {
     .then(r => {
       this.setState({editing: false, site: r.renameSite})
     })
-    .catch(e => {
-      console.log(e.stack)
-      this.setState({error: 'failed, please try again.'})
-    })
+    .catch(log.error)
   },
 
   cancelEdit () {
@@ -150,23 +148,22 @@ query c($code: String!) {
   confirmDelete () {
     this.setState({deleting: false})
     graphql.mutate(`
-      ($code: String!) {
-        deleteSite(code: $code) {
-          ok
-        }
-      }
+($code: String!) {
+  deleteSite(code: $code) {
+    ok, error
+  }
+}
     `, {code: this.state.site.code})
     .then(r => {
-      if (r.deleteSite.ok) {
-        this.props.iWasDeleted()
+      if (!r.deleteSite.ok) {
+        log.error('failed to delete site:', r.deleteSite.error)
+        this.setState({deleting: false})
         return
       }
-      this.setState({deleting: false})
+      log.info(`${this.props.site.name} was deleted.`)
+      this.props.iWasDeleted()
     })
-    .catch(e => {
-      console.log(e.stack)
-      this.setState({error: 'failed, please try again.'})
-    })
+    .catch(log.error)
   },
 
   cancelDelete () {

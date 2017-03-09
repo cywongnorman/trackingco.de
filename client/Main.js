@@ -5,6 +5,7 @@ const Router = require('react-router-dom').BrowserRouter
 const Route = require('react-router-dom').Route
 const Link = require('react-router-dom').Link
 
+const log = require('./log')
 const CardsView = require('./CardsView')
 const SiteDetail = require('./SiteDetail')
 const UserAccount = require('./UserAccount')
@@ -27,12 +28,14 @@ module.exports = React.createClass({
 
     auth0.parseHash(location.hash, (err, result) => {
       if (err) {
-        console.log('error parsing hash:', err)
+        log.error("error parsing account credentials, you'll be logged out.")
+        log.debug(err)
         setToken('')
         return
       }
 
       if (result) {
+        log.success("You're now logged in!")
         setToken(result.idToken)
       }
     })
