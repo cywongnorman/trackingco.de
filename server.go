@@ -22,6 +22,7 @@ func runServer() {
 		return nil
 	})
 	router.Get("/sites", serveClient)
+	router.Get("/account", serveClient)
 	router.Get("/sites/<code>", serveClient)
 	router.Get("/public/<code>", serveClient)
 

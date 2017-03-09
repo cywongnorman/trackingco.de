@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"math/rand"
 	"net/url"
 	"strconv"
@@ -86,9 +87,23 @@ func buildReferrerBlacklist() map[string]bool {
 	refmap := make(map[string]bool)
 
 	lines := ""
-	lines += doRequest("https://raw.githubusercontent.com/ddofborg/analytics-ghost-spam-list/master/adwordsrobot.com-spam-list.txt")
-	lines += "\n"
-	lines += doRequest("https://raw.githubusercontent.com/piwik/referrer-spam-blacklist/master/spammers.txt")
+	client := &fasthttp.Client{Name: "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/56.0.2924.76 Chrome/56.0.2924.76 Safari/537.36"}
+	for _, u := range []string{
+		"https://raw.githubusercontent.com/piwik/referrer-spam-blacklist/master/spammers.txt",
+		"https://raw.githubusercontent.com/ddofborg/analytics-ghost-spam-list/master/adwordsrobot.com-spam-list.txt",
+	} {
+		r := fasthttp.AcquireRequest()
+		r.SetRequestURI(u)
+
+		w := fasthttp.AcquireResponse()
+		err := client.DoTimeout(r, w, time.Second*25)
+		if err != nil {
+			continue
+		}
+
+		lines += string(w.Body())
+		lines += "\n"
+	}
 
 	for _, line := range strings.Split(lines, "\n") {
 		refmap[strings.TrimSpace(line)] = true
@@ -103,18 +118,38 @@ func buildReferrerBlacklist() map[string]bool {
 	return refmap
 }
 
-func doRequest(u string) string {
-	req := fasthttp.AcquireRequest()
-	req.SetRequestURI(u)
+func herokuDomains(method, subpath string, data interface{}) (resp *herokuDomainResponse, err error) {
+	client := &fasthttp.Client{}
 
-	resp := fasthttp.AcquireResponse()
-	client := &fasthttp.Client{
-		Name: "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/56.0.2924.76 Chrome/56.0.2924.76 Safari/537.36",
+	r := fasthttp.AcquireRequest()
+	r.SetRequestURI("https://api.heroku.com/apps/" + s.HerokuAppName + "/domains" + subpath)
+	r.Header.SetMethod(method)
+	r.Header.Set("Accept", "application/vnd.heroku+json; version=3")
+	r.Header.Set("Content-Type", "application/json")
+	r.Header.Set("Authorization", "Bearer "+s.HerokuToken)
+
+	if data != nil {
+		body, err := json.Marshal(data)
+		if err != nil {
+			return nil, err
+		}
+		r.SetBody(body)
 	}
-	err := client.DoTimeout(req, resp, time.Second*25)
+
+	w := fasthttp.AcquireResponse()
+	err = client.DoTimeout(r, w, time.Second*25)
 	if err != nil {
-		return ""
+		return nil, err
 	}
 
-	return string(resp.Body())
+	resp = &herokuDomainResponse{}
+	err = json.Unmarshal(w.Body(), resp)
+	return resp, err
+}
+
+type herokuDomainResponse struct {
+	Id       string `json:"id"`
+	Message  string `json:"message"`
+	Hostname string `json:"hostname"`
+	Status   string `json:"string"`
 }

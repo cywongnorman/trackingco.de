@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"errors"
+	"log"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/fjl/go-couchdb"
+	"github.com/galeone/igor"
 	"github.com/graphql-go/graphql"
 )
 
@@ -319,11 +321,52 @@ var siteType = graphql.NewObject(
 	},
 )
 
+var coloursType = graphql.NewObject(
+	graphql.ObjectConfig{
+		Name: "Colours",
+		Fields: graphql.Fields{
+			"bar1": &graphql.Field{
+				Type: graphql.String,
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					return p.Source.(igor.JSON)["bar1"], nil
+				},
+			},
+			"line1": &graphql.Field{
+				Type: graphql.String,
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					return p.Source.(igor.JSON)["line1"], nil
+				},
+			},
+			"background": &graphql.Field{
+				Type: graphql.String,
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					return p.Source.(igor.JSON)["background"], nil
+				},
+			},
+		},
+	},
+)
+
+var coloursInput = graphql.NewInputObject(
+	graphql.InputObjectConfig{
+		Name: "ColoursInput",
+		Fields: graphql.InputObjectConfigFieldMap{
+			"bar1":       &graphql.InputObjectFieldConfig{Type: graphql.String},
+			"line1":      &graphql.InputObjectFieldConfig{Type: graphql.String},
+			"background": &graphql.InputObjectFieldConfig{Type: graphql.String},
+		},
+	},
+)
+
 var userType = graphql.NewObject(
 	graphql.ObjectConfig{
 		Name: "User",
 		Fields: graphql.Fields{
 			"id": &graphql.Field{Type: graphql.String},
+			"plan": &graphql.Field{
+				Type:        graphql.Float,
+				Description: "the plan this user is currently in.",
+			},
 			"sites": &graphql.Field{
 				Type: graphql.NewList(siteType),
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
@@ -343,6 +386,18 @@ ORDER BY o`, p.Source.(User).Id).Scan(&sites)
 					return sites, nil
 				},
 			},
+			"domains": &graphql.Field{
+				Type: graphql.NewList(graphql.String),
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					list := strings.Split(p.Source.(User).Domains, ",")
+					if len(list) == 1 && list[0] == "" {
+						return []string{}, nil
+					} else {
+						return list, nil
+					}
+				},
+			},
+			"colours": &graphql.Field{Type: coloursType},
 		},
 	},
 )
@@ -357,7 +412,7 @@ var rootQuery = graphql.ObjectConfig{
 					Id: userIdFromContext(p.Context),
 				}
 				err = pg.Model(user).
-					Select("id").
+					Select("id, array_to_string(domains, ','), colours, plan").
 					Where(user).
 					Scan(&user)
 				if err != nil {
@@ -420,7 +475,8 @@ var resultType = graphql.NewObject(
 	graphql.ObjectConfig{
 		Name: "Result",
 		Fields: graphql.Fields{
-			"ok": &graphql.Field{Type: graphql.Boolean},
+			"ok":    &graphql.Field{Type: graphql.Boolean},
+			"error": &graphql.Field{Type: graphql.String},
 		},
 	},
 )
@@ -512,7 +568,7 @@ var rootMutation = graphql.ObjectConfig{
 				)
 				if err != nil {
 					tx.Rollback()
-					return Result{false}, err
+					return Result{false, err.Error()}, err
 				}
 
 				err = tx.Exec(
@@ -521,15 +577,15 @@ var rootMutation = graphql.ObjectConfig{
 				)
 				if err != nil {
 					tx.Rollback()
-					return Result{false}, err
+					return Result{false, err.Error()}, err
 				}
 
 				if err = tx.Commit(); err != nil {
 					tx.Rollback()
-					return Result{false}, err
+					return Result{false, err.Error()}, err
 				}
 
-				return Result{true}, nil
+				return Result{true, ""}, nil
 			},
 		},
 		"changeSiteOrder": &graphql.Field{
@@ -552,9 +608,9 @@ var rootMutation = graphql.ObjectConfig{
 					`UPDATE users SET sites_order = string_to_array(?, '@^~^@') WHERE id = ?`,
 					order, userId)
 				if err != nil {
-					return Result{false}, err
+					return Result{false, err.Error()}, err
 				}
-				return Result{true}, nil
+				return Result{true, ""}, nil
 			},
 		},
 		"shareSite": &graphql.Field{
@@ -577,9 +633,104 @@ var rootMutation = graphql.ObjectConfig{
 					`UPDATE sites SET shared = ? WHERE code = ? and user_id = ?`,
 					share, code, userId)
 				if err != nil {
-					return Result{false}, err
+					return Result{false, err.Error()}, err
 				}
-				return Result{true}, nil
+				return Result{true, ""}, nil
+			},
+		},
+		"addDomain": &graphql.Field{
+			Type: resultType,
+			Args: graphql.FieldConfigArgument{
+				"hostname": &graphql.ArgumentConfig{
+					Type: graphql.NewNonNull(graphql.String),
+				},
+			},
+			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				userId := userIdFromContext(p.Context)
+				host := p.Args["hostname"].(string)
+
+				data := map[string]string{"hostname": host}
+				resp, err := herokuDomains("POST", "", data)
+				if err != nil {
+					return Result{false, err.Error()}, err
+				}
+
+				if resp.Hostname == "" {
+					if resp.Id == "invalid_params" && strings.Index(resp.Message, "already") != -1 {
+						// ok, that's good.
+					} else {
+						log.Print("failed to add domain ", host, " ", resp)
+						return Result{false, err.Error()}, nil
+					}
+				}
+
+				err = pg.Exec(
+					`UPDATE users SET domains = array_append(array_remove(domains, ?), ?) WHERE id = ?`,
+					host, host, userId)
+				if err != nil {
+					return Result{false, err.Error()}, err
+				}
+				return Result{true, ""}, nil
+			},
+		},
+		"removeDomain": &graphql.Field{
+			Type: resultType,
+			Args: graphql.FieldConfigArgument{
+				"hostname": &graphql.ArgumentConfig{
+					Type: graphql.NewNonNull(graphql.String),
+				},
+			},
+			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				userId := userIdFromContext(p.Context)
+				host := p.Args["hostname"].(string)
+
+				resp, err := herokuDomains("DELETE", "/"+host, nil)
+				if err != nil {
+					return Result{false, err.Error()}, err
+				}
+
+				if resp.Hostname == "" {
+					if resp.Id == "not_found" {
+						// ok, that's good.
+					} else {
+						log.Print("failed to remove domain ", host, " ", resp)
+						return Result{false, err.Error()}, nil
+					}
+				}
+
+				err = pg.Exec(
+					`UPDATE users SET domains = array_remove(domains, ?) WHERE id = ?`,
+					host, userId)
+				if err != nil {
+					return Result{false, err.Error()}, err
+				}
+				return Result{true, ""}, nil
+			},
+		},
+		"setColours": &graphql.Field{
+			Type: resultType,
+			Args: graphql.FieldConfigArgument{
+				"colours": &graphql.ArgumentConfig{
+					Type:        coloursInput,
+					Description: "an object with each colour definition.",
+				},
+			},
+			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				userId := userIdFromContext(p.Context)
+				colours := make(igor.JSON)
+
+				for field, colour := range p.Args["colours"].(map[string]interface{}) {
+					colours[field] = colour
+				}
+
+				err = pg.Exec(
+					`UPDATE users SET colours = ? WHERE id = ?`,
+					colours, userId)
+				if err != nil {
+					return Result{false, err.Error()}, err
+				}
+
+				return Result{true, ""}, nil
 			},
 		},
 	},

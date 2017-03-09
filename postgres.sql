@@ -1,6 +1,9 @@
 CREATE TABLE users (
   id text primary key,
-  sites_order text[]
+  sites_order text[],
+  colours jsonb,
+  domains text[] NOT NULL DEFAULT '{}',
+  plan float NOT NULL DEFAULT 0
 );
 
 CREATE TABLE sites (

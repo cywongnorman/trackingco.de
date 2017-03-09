@@ -26,6 +26,8 @@ type Settings struct {
 	SessionOffsetHashidSalt string `envconfig:"SESSION_OFFSET_HASHID_SALT"`
 	LoggedAs                string `envconfig:"LOGGED_AS"`
 	Auth0Secret             string `envconfig:"AUTH0_SECRET"`
+	HerokuToken             string `envconfig:"HEROKU_TOKEN"`
+	HerokuAppName           string `envconfig:"HEROKU_APPNAME"`
 }
 
 var err error

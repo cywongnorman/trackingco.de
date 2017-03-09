@@ -3,9 +3,35 @@ const color = require('color')
 const levenshtein = require('leven')
 const url = require('url')
 
-module.exports.colours = {
-  bar1: '#8884d8',
-  line1: '#82ca9d'
+const graphql = require('./graphql')
+
+module.exports.coloursfragment = graphql.createFragment(`
+  fragment on Colours {
+    bar1
+    line1
+    background
+  }
+`)
+
+module.exports.mergeColours = function () {
+  var colours = defaultColours
+  for (let i = 0; i < arguments.length; i++) {
+    let colourSet = arguments[i]
+
+    for (let field in colourSet) {
+      if (colourSet[field]) {
+        colours[field] = colourSet[field]
+      }
+    }
+  }
+
+  return colours
+}
+
+const defaultColours = {
+  bar1: '#4791AE',
+  line1: '#EA8676',
+  background: '#FDEECD'
 }
 
 const months = require('months')

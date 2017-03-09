@@ -1,6 +1,7 @@
 {
   "name": "trackingco.de-client",
   "dependencies": {
+    "body-style": "^0.3.0",
     "color": "^1.0.3",
     "leven": "^2.1.0",
     "localsync": "^1.4.0",
@@ -11,9 +12,11 @@
     "randomcolor": "^0.4.4",
     "react": "^15.4.2",
     "react-click-outside": "^2.2.0",
+    "react-color": "^2.11.3",
     "react-dnd": "^2.2.3",
     "react-dnd-html5-backend": "^2.2.3",
     "react-dnd-touch-backend": "^0.3.5",
+    "react-document-title": "^2.0.2",
     "react-dom": "^15.4.2",
     "react-hyperscript": "^3.0.0",
     "react-router-dom": "^4.0.0-beta.6",

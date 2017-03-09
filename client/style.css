@@ -75,6 +75,10 @@ nav.nav {
 
 .card.detail-trackingcode code { white-space: pre-wrap; }
 
+.card.account-domains,
+.card.account-info,
+.card.account-colours,
+.card.account-plan,
 .card.detail-chart-main,
 .card.detail-chart-individualsessions,
 .card.detail-table,
@@ -105,8 +109,16 @@ nav.nav {
 .custom-tooltip .recharts-tooltip-label { text-align: center; margin-bottom: 4px; }
 .custom-tooltip .recharts-tooltip-item-list { text-align: right; }
 
-/* balloons.css */
+.card.account-colours .colours > div { display: inline-block }
+.card.account-colours .colours > div:not(:first-child) { margin-left: 5px }
+.card.account-colours .twitter-picker {
+  position: absolute !important;
+  z-index: 12;
+}
 
+.card.account-domains li:not(:last-child) { margin-bottom: 5px; }
+
+/* balloons.css */
 button[title] {
   overflow: visible;
 }

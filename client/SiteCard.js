@@ -5,6 +5,7 @@ const DropTarget = require('react-dnd').DropTarget
 const Link = require('react-router-dom').Link
 
 const graphql = require('./graphql')
+const coloursfragment = require('./helpers').coloursfragment
 const charts = {
   Card: require('./charts/Card')
 }
@@ -12,7 +13,8 @@ const charts = {
 const SiteCard = React.createClass({
   getInitialState () {
     return {
-      site: {},
+      site: null,
+      me: null,
       editing: false,
       deleting: false,
       editingName: ''
@@ -38,6 +40,10 @@ query c($code: String!) {
   site(code: $code, last: 7) {
     ...${this.sitef}
   }
+
+  me {
+    colours { ...${coloursfragment} }
+  }
 }
     `, {code: this.props.code})
     .then(r => this.setState(r))
@@ -53,6 +59,10 @@ query c($code: String!) {
   },
 
   render () {
+    if (!this.state.site) {
+      return h('div')
+    }
+
     return this.props.connectDragSource(this.props.connectDropTarget(
       this.props.isDragging
       ? h('.card.site.empty', '　')
@@ -85,7 +95,10 @@ query c($code: String!) {
         h('.card-image', [
           h('i.fa.fa-square-o.placeholder'),
           h('figure.image', [
-            h(charts.Card, this.state)
+            h(charts.Card, {
+              site: this.state.site,
+              colours: this.state.me.colours
+            })
           ])
         ]),
         h('.card-footer', this.state.deleting

@@ -7,6 +7,7 @@ const Link = require('react-router-dom').Link
 
 const CardsView = require('./CardsView')
 const SiteDetail = require('./SiteDetail')
+const UserAccount = require('./UserAccount')
 const auth0 = require('./auth').auth0
 const getLogoutURL = require('./auth').getLogoutURL
 const setToken = require('./auth').setToken
@@ -51,7 +52,10 @@ module.exports = React.createClass({
             ]),
             h('.nav-center', [
               this.state.isLogged
-              ? h(Link, {className: 'nav-item', to: '/sites'}, 'your sites')
+              ? h(Link, {className: 'nav-item', to: '/account'}, 'account')
+              : '',
+              this.state.isLogged
+              ? h(Link, {className: 'nav-item', to: '/sites'}, 'sites')
               : h('a.nav-item', {onClick: this.login}, 'login'),
               this.state.isLogged
               ? h('a.nav-item', {onClick: this.logout}, 'logout')
@@ -60,7 +64,8 @@ module.exports = React.createClass({
           ]),
           h(Route, {exact: true, path: '/sites', component: CardsView}),
           h(Route, {exact: true, path: '/sites/:code', component: SiteDetail}),
-          h(Route, {exact: true, path: '/public/:code', component: SiteDetail})
+          h(Route, {exact: true, path: '/public/:code', component: SiteDetail}),
+          h(Route, {exact: true, path: '/account', component: UserAccount})
         ])
       ])
     )

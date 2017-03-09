@@ -1,6 +1,10 @@
 package main
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/galeone/igor"
+)
 
 type Compendium struct {
 	Id  string `json:"_id,omitempty"`
@@ -33,11 +37,14 @@ type SessionGroup struct {
 }
 
 type User struct {
-	Id string `json:"id,omitempty" igor:"primary_key"`
+	Id      string    `json:"id" igor:"primary_key"`
+	Domains string    `json:"domains"` // actually an array of domains comma-separated.
+	Colours igor.JSON `json:"colours"`
+	Plan    float64   `json:"plan"`
 
 	SitesOrder []string `json:"-" sql:"-"`
 
-	Sites []Site `json:"sites,omitempty" sql:"-"`
+	Sites []Site `json:"sites" sql:"-"`
 }
 
 func (_ User) TableName() string { return "users" }
@@ -80,5 +87,6 @@ func (res CouchDBDayResults) toCompendiumList() []Compendium {
 }
 
 type Result struct {
-	Ok bool `json:"ok"`
+	Ok    bool   `json:"ok"`
+	Error string `json:"error"`
 }

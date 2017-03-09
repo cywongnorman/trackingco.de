@@ -3,18 +3,20 @@ const h = require('react-hyperscript')
 const DragDropContext = require('react-dnd').DragDropContext
 const TouchBackend = require('react-dnd-touch-backend')
 const HTML5Backend = require('react-dnd-html5-backend')
+const DocumentTitle = require('react-document-title')
+const BodyStyle = require('body-style')
 
 const graphql = require('./graphql')
 const SiteCard = require('./SiteCard')
 const NewSiteCard = require('./NewSiteCard')
+const mergeColours = require('./helpers').mergeColours
 const onLoggedStateChange = require('./auth').onLoggedStateChange
 
 const Dashboard = React.createClass({
   getInitialState () {
     return {
-      me: {
-        sites: []
-      }
+      sites: null,
+      me: null
     }
   },
 
@@ -25,6 +27,7 @@ query {
     sites {
       code
     }
+    colours { background }
   }
 }
     `)
@@ -41,26 +44,36 @@ query {
   },
 
   render () {
+    if (!this.state.me) {
+      return h('div')
+    }
+
+    let backgroundColor = mergeColours(this.state.me.colours).background
+
     return (
-      h('.columns.is-multiline.is-mobile', this.state.me.sites.map((site, i) =>
-        h('.column.is-2-widescreen.is-3-desktop.is-4-tablet.is-6-mobile', {
-          key: site.code
-        }, [
-          h(SiteCard, {
-            code: site.code,
-            index: i,
-            moveSite: this.moveSite,
-            saveSiteOrder: this.saveSiteOrder,
-            iWasDeleted: this.removeSiteFromScreen.bind(this, site.code)
-          })
+      h(DocumentTitle, {title: 'sites'}, [
+        h(BodyStyle, {style: {backgroundColor}}, [
+          h('.columns.is-multiline.is-mobile', this.state.me.sites.map((site, i) =>
+            h('.column.is-2-widescreen.is-3-desktop.is-4-tablet.is-6-mobile', {
+              key: site.code
+            }, [
+              h(SiteCard, {
+                code: site.code,
+                index: i,
+                moveSite: this.moveSite,
+                saveSiteOrder: this.saveSiteOrder,
+                iWasDeleted: this.removeSiteFromScreen.bind(this, site.code)
+              })
+            ])
+          ).concat(
+            h('.column.is-2-widescreen.is-3-desktop.is-4-tablet.is-6-mobile', {
+              key: '_new'
+            }, [
+              h(NewSiteCard, {onNewSiteCreated: this.query})
+            ])
+          ))
         ])
-      ).concat(
-        h('.column.is-2-widescreen.is-3-desktop.is-4-tablet.is-6-mobile', {
-          key: '_new'
-        }, [
-          h(NewSiteCard, {onNewSiteCreated: this.query})
-        ])
-      ))
+      ])
     )
   },
 

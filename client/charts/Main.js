@@ -3,7 +3,7 @@ const h = require('react-hyperscript')
 const R = require('recharts')
 
 const formatdate = require('../helpers').formatdate
-const colours = require('../helpers').colours
+const mergeColours = require('../helpers').mergeColours
 
 module.exports = React.createClass({
   shouldComponentUpdate (nextProps, nextState) {
@@ -13,6 +13,8 @@ module.exports = React.createClass({
   },
 
   render () {
+    let colours = mergeColours(this.props.colours)
+
     return (
       h(R.ResponsiveContainer, {height: 300, width: '100%'}, [
         h(R.ComposedChart, {data: this.props.site.days}, [
