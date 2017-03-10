@@ -88,6 +88,11 @@ func main() {
 	blacklist = buildReferrerBlacklist()
 	log.Print("using referrer blacklist with ", len(blacklist), " entries.")
 
+	// logged as
+	if s.LoggedAs != "" {
+		log.Print("logged by default as ", s.LoggedAs)
+	}
+
 	// run routines or start the server
 	if len(os.Args) == 1 {
 		runServer()

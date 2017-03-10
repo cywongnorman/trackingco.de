@@ -1,6 +1,7 @@
 {
   "name": "trackingco.de-client",
   "dependencies": {
+    "auth0-js": "^8.3.0",
     "body-style": "^0.3.0",
     "color": "^1.0.3",
     "leven": "^2.1.0",

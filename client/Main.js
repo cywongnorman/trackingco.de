@@ -10,7 +10,6 @@ const CardsView = require('./CardsView')
 const SiteDetail = require('./SiteDetail')
 const UserAccount = require('./UserAccount')
 const auth0 = require('./auth').auth0
-const getLogoutURL = require('./auth').getLogoutURL
 const setToken = require('./auth').setToken
 const onLoggedStateChange = require('./auth').onLoggedStateChange
 
@@ -26,20 +25,20 @@ module.exports = React.createClass({
       this.setState({isLogged})
     })
 
-    auth0.parseHash(location.hash, (err, result) => {
-      if (err) {
-        log.error("error parsing account credentials, you'll be logged out.")
-        log.debug(err)
-        setToken('')
-        return
-      }
+    if (location.hash && location.hash.indexOf('token')) {
+      auth0.parseHash(location.hash, (err, result) => {
+        if (err) {
+          log.error("error parsing account credentials, you'll be logged out.")
+          log.debug(err)
+          setToken('')
+          return
+        }
 
-      if (result) {
         log.success("You're now logged in!")
-        setToken(result.idToken)
-      }
-    })
-    location.hash = ''
+        setToken(result.id_token)
+        location.hash = ''
+      })
+    }
   },
 
   render () {
@@ -59,10 +58,10 @@ module.exports = React.createClass({
               : '',
               this.state.isLogged
               ? h(Link, {className: 'nav-item', to: '/sites'}, 'sites')
-              : h('a.nav-item', {onClick: this.login}, 'login'),
+              : h('a.nav-item', {href: auth0.getLoginURL()}, 'login'),
               this.state.isLogged
-              ? h('a.nav-item', {onClick: this.logout}, 'logout')
-              : h('a.nav-item', {onClick: this.login}, 'start tracking your sites!')
+              ? h('a.nav-item', {onClick: auth0.logout}, 'logout')
+              : h('a.nav-item', {href: auth0.getLoginURL()}, 'start tracking your sites!')
             ])
           ]),
           h(Route, {exact: true, path: '/sites', component: CardsView}),
@@ -72,15 +71,5 @@ module.exports = React.createClass({
         ])
       ])
     )
-  },
-
-  login (e) {
-    e.preventDefault()
-    auth0.authorize()
-  },
-
-  logout (e) {
-    e.preventDefault()
-    location.href = getLogoutURL()
   }
 })

@@ -1,23 +1,46 @@
-const Auth0 = window.auth0
 const localsync = require('localsync').default
 const Emitter = require('tiny-emitter')
+const Auth0 = require('auth0-js')
 
 const log = require('./log')
 
-let auth0options = {
-  domain: 'trackingcode.auth0.com',
-  clientID: 'bT2dkdr6IzcVgOcTD5dVuG5NLGn1qps6',
-  responseType: 'id_token',
-  redirectUri: location.protocol + '//' + location.host + '/sites'
-}
+var domain = 'trackingcode.auth0.com'
+const clientId = 'bT2dkdr6IzcVgOcTD5dVuG5NLGn1qps6'
+const returnTo = location.protocol + '//' + location.host
+const redirectTo = returnTo + '/sites'
 
-module.exports.auth0 = new Auth0.WebAuth(auth0options)
+const auth0 = new Auth0.WebAuth({
+  domain: domain,
+  clientID: clientId,
+  responseType: 'id_token'
+})
 
-const auth0AuthAPI = new Auth0.Authentication(auth0options)
-module.exports.getLogoutURL = function () {
-  return auth0AuthAPI.buildLogoutUrl({
-    returnTo: location.protocol + '//' + location.host
-  })
+module.exports.auth0 = {
+  logout () {
+    module.exports.setToken(null)
+  },
+
+  getLoginURL () {
+    var state = Math.random().toString()
+    return auth0.client.buildAuthorizeUrl({
+      redirectUri: redirectTo,
+      nonce: state,
+      scope: 'openid'
+    })
+  },
+
+  parseHash (hash, cb) {
+    auth0.parseHash(hash, cb)
+  },
+
+  getUserInfo (idToken) {
+    return window.fetch('https://trackingcode.auth0.com/userinfo', {
+      method: 'GET',
+      headers: {'Authorization': 'Bearer ' + idToken},
+      mode: 'cors'
+    })
+      .then(r => r.json())
+  }
 }
 
 const loggedEmitter = new Emitter()

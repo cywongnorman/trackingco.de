@@ -14,8 +14,8 @@
       <a class="nav-item">trackingco.de</a>
     </div>
     <div class="nav-center">
-      <a class="nav-item" onclick="login()">login to the dashboard</a>
-      <a class="nav-item" onclick="login()">create your free account!</a>
+      <a class="nav-item" href="#/" id="login">login to the dashboard</a>
+      <a class="nav-item" href="#/create">create your free account!</a>
     </div>
   </nav>
   <section class="alt">
@@ -23,7 +23,7 @@
       <div class="columns is-multiline">
         <div class="column is-10 is-offset-1">
           <h1 class="title">
-            <b>Simple</b>, powerful <i>but not unlimited</i>, <b>cheap</b> web analytics.
+            <b>Simple</b>, powerful <i>but not unlimited</i>, <b>cheap</b> and <b>open-source</b> web analytics.
           </h1>
         </div>
         <div class="column is-12">
@@ -69,12 +69,17 @@
             </div>
           </div>
           <div class="tile">
-            <div class="tile is-parent">
+            <div class="tile is-parent is-vertical">
+              <div class="tile is-child">
+                <div class="box">
+                  <h4 class="title is-4">host it yourself: it's open source!</h4>
+                  <small>check it out on <a href="https://github.com/fiatjaf/trackingco.de">GitHub</a>!</small>
+                </div>
+              </div>
               <div class="tile is-child">
                 <div class="box">
                   <h4 class="title is-4">bypass adblockers by using your own domain</h4>
                   <small>If you use <a href="https://blog.cloudflare.com/introducing-universal-ssl/" target="_blank">Cloudflare Universal SSL</a> and register your domain to your <b>trackingco.de</b> account you can use it instead of our default tracking domain to submit data.</small>
-                  <small><i>de facto</i> whitelabelling.</small>
                 </div>
               </div>
             </div>
@@ -82,13 +87,13 @@
               <div class="tile is-child">
                 <div class="box ui-colors">
                   <h4 class="title is-4">you can change the UI colors</h4>
-                  <small>Isn't it nice to have the rainbow in your hands?</small>
+                  <small>The rainbow is the limit!</small>
                 </div>
               </div>
               <div class="tile is-child">
                 <div class="box">
-                  <h4 class="title is-4">host it yourself: it's open source!</h4>
-                  <small>check it out on <a href="https://github.com/fiatjaf/trackingco.de">GitHub</a>!</small>
+                  <h4 class="title is-4">works on your phone</h4>
+                  <small>Not an app, just a responsive website that will show you the data.</small>
                 </div>
               </div>
             </div>
@@ -113,8 +118,8 @@
             <div class="tile is-parent is-vertical">
               <div class="tile is-child">
                 <div class="box">
-                  <h4 class="title is-4">your data is not owned by Google</h4>
-                  <small>It's in your hands, and you can export it when you want!</small>
+                  <h4 class="title is-4">your data is not owned by a big evil company</h4>
+                  <small>It's in your hands, and you can export it whenever you want!</small>
                 </div>
               </div>
               <div class="tile is-child">
@@ -128,11 +133,12 @@
           <div class="tile is-parent">
             <div class="tile is-child">
               <div class="box">
-                <h4 class="title is-4">visualize each session behavior in a glimpse</h4>
-                <small>Each visitor is recorded along with the referrer through which he came and a number of points. By default these points correspond to the number of pages visited, but you can use them for simple conversion tracking.</small>
+                <h4 class="title is-4">visualize each visitor session in a glimpse</h4>
+                <small>Each visitor is recorded along with the referrer through which he came and a number of points.</small>
                 <figure class="image">
                   <img src="/client/images/sessions.png">
                 </figure>
+                <small>By default these points correspond to the number of pages visited, but you can customize them for simple conversion tracking or other things.</small>
               </div>
             </div>
           </div>
@@ -206,23 +212,34 @@
             </table>
           </div>
         </div>
-        <div class="column is-6 is-offset-3">
+      </div>
+      <div class="columns">
+        <div class="column is-8 is-offset-2">
+          <div class="content">
+            <p>Is there a free plan?, you may ask. And the answer is "not actually". You can have a <b>trackingco.de</b> account for free and you can even create a site and track some metrics into it, but it will not last long. We have some small limits that will let you see how everything works, but are not suitable for any website that has actual visitors.</p>
+          </div>
+        </div>
+      </div>
+      <div class="columns">
+        <div id="/create" class="column is-6 is-offset-3">
           <div class="box signup">
-            <form>
+            <h3 class="title is-3 has-text-centered">Sign up now</h3>
+            <h6 class="subtitle is-6 has-text-centered">it will cost nothing and we will not spam you</h6>
+            <form method="GET" id="signup">
               <p class="control has-icon">
-                <input class="input" type="email" placeholder="Email">
-                <span class="icon is-small">
-                  <i class="fa fa-envelope"></i>
-                </span>
-              </p>
-              <p class="control has-icon">
-                <input class="input" type="text" placeholder="Username" title="optional, you'll be able to use this for logging in, but you'll also be able to use your email.">
+                <input class="input" name="username" type="text" placeholder="Username" title="optional, you'll be able to use this for logging in, but you'll also be able to use your email.">
                 <span class="icon is-small">
                   <i class="fa fa-user"></i>
                 </span>
               </p>
               <p class="control has-icon">
-                <input class="input" type="password" placeholder="Password">
+                <input class="input" name="email" type="email" placeholder="Email">
+                <span class="icon is-small">
+                  <i class="fa fa-envelope"></i>
+                </span>
+              </p>
+              <p class="control has-icon">
+                <input class="input" name="password" type="password" placeholder="Password">
                 <span class="icon is-small">
                   <i class="fa fa-lock"></i>
                 </span>
@@ -234,9 +251,9 @@
                 <div class="level-left">
                   <div class="level-item">
                     or use these:&nbsp;&nbsp;
-                    <span class="icon"><a><i class="fa fa-github"></i></a></span>
-                    <span class="icon"><a><i class="fa fa-google"></i></a></span>
-                    <span class="icon"><a><i class="fa fa-bitbucket"></i></a></span>
+                    <span class="icon"><a id="github"><i class="fa fa-github"></i></a></span>
+                    <span class="icon"><a id="google"><i class="fa fa-google"></i></a></span>
+                    <span class="icon"><a id="bitbucket"><i class="fa fa-bitbucket"></i></a></span>
                   </div>
                 </div>
               </p>
@@ -259,15 +276,67 @@
   </footer>
 </body>
 
-<script src=https://cdn.auth0.com/js/auth0/8.3.0/auth0.min.js></script>
+<script src=http://cdn.auth0.com/js/auth0/8.3.0/auth0.min.js></script>
 <script>
-var auth0 = new window.auth0.WebAuth({
-  domain: 'trackingcode.auth0.com',
-  clientID: 'bT2dkdr6IzcVgOcTD5dVuG5NLGn1qps6',
-  responseType: 'id_token',
-  scope: 'openid',
-  redirectUri: location.protocol + '//' + location.host + '/sites'
+var domain = 'trackingcode.auth0.com'
+var clientId = 'bT2dkdr6IzcVgOcTD5dVuG5NLGn1qps6'
+var redirectTo = location.protocol + '//' + location.host + '/sites'
+
+var state = Math.random().toString()
+localStorage.setItem('_auth0state', state)
+
+var auth0 = new auth0.WebAuth({
+  domain: domain,
+  clientID: clientId,
+  responseType: 'id_token'
 })
 
-function login () { auth0.authorize() }
+var url = auth0.client.buildAuthorizeUrl({
+  redirectUri: redirectTo,
+  nonce: state,
+  scope: 'openid'
+})
+window.login.href = url
+window.signup.action = url
+window.github.href = url + '&connection=github'
+window.google.href = url + '&connection=google-oauth2'
+window.bitbucket.href = url + '&connection=bitbucket'
+
+window.signup.addEventListener('submit', function (e) {
+  e.preventDefault()
+
+  var data = {}
+  var fields = window.signup.querySelectorAll('[name]')
+  for (var i = 0; i < fields.length; i++) {
+    var field = fields[i]
+    data[field.name] = field.value
+  }
+
+  auth0.signupAndAuthorize({
+    connection: 'Username-Password-Authentication',
+    email: data.email,
+    password: data.password,
+    username: data.username
+  }, function (err, res) {
+    if (err) {
+      if (err.code === 'user_exists') {
+        auth0.client.login({
+          realm: 'Username-Password-Authentication',
+          username: data.username,
+          password: data.password,
+          scope: 'openid'
+        }, function (err, res) {
+          localStorage.setItem('_tcj', res.id_token)
+          location.hash = '#/'
+          location.pathname = '/sites'
+        })
+      }
+      return
+    }
+
+    localStorage.setItem('_tcj', res.id_token)
+    location.hash = '#/'
+    location.pathname = '/sites'
+  })
+})
 </script>

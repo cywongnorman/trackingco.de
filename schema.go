@@ -408,15 +408,16 @@ var rootQuery = graphql.ObjectConfig{
 		"me": &graphql.Field{
 			Type: userType,
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				user := User{
-					Id: userIdFromContext(p.Context),
-				}
+				user := User{}
 				err = pg.Model(user).
 					Select("id, array_to_string(domains, ','), colours, plan").
-					Where(user).
+					Where("id = ?", userIdFromContext(p.Context)).
 					Scan(&user)
 				if err != nil {
 					return nil, err
+				}
+				if user.Id == "" {
+					return nil, errors.New("you must be logged in to query 'me'.")
 				}
 				return user, nil
 			},
