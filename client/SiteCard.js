@@ -2,7 +2,6 @@ const React = require('react')
 const h = require('react-hyperscript')
 const DragSource = require('react-dnd').DragSource
 const DropTarget = require('react-dnd').DropTarget
-const Link = require('react-router-dom').Link
 
 const log = require('./log')
 const graphql = require('./graphql')
@@ -81,7 +80,7 @@ query c($code: String!) {
                 __html: this.state.site.name
               }
             })
-            : h(Link, {to: `/sites/${this.state.site.code}`}, this.state.site.name)
+            : h('a', {href: `/sites/${this.state.site.code}`}, this.state.site.name)
           ]),
           this.state.site.shareURL
           ? (
@@ -113,7 +112,7 @@ query c($code: String!) {
               h('a.card-footer-item', {onClick: this.cancelEdit}, 'cancel')
             ]
             : [
-              h(Link, {className: 'card-footer-item', to: `/sites/${this.props.code}`}, 'view'),
+              h('a', {className: 'card-footer-item', href: `/sites/${this.props.code}`}, 'view'),
               h('a.card-footer-item', {onClick: () => { this.setState({editing: true}) }}, 'rename'),
               h('a.card-footer-item', {onClick: () => { this.setState({deleting: true}) }}, 'delete')
             ]

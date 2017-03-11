@@ -1,9 +1,6 @@
 const React = require('react')
 const h = require('react-hyperscript')
-const createBrowserHistory = require('history').createBrowserHistory
-const Router = require('react-router-dom').BrowserRouter
-const Route = require('react-router-dom').Route
-const Link = require('react-router-dom').Link
+const page = require('page')
 
 const log = require('./log')
 const CardsView = require('./CardsView')
@@ -16,7 +13,11 @@ const onLoggedStateChange = require('./auth').onLoggedStateChange
 module.exports = React.createClass({
   getInitialState () {
     return {
-      isLogged: false
+      isLogged: false,
+      route: {
+        component: () => h('div'),
+        props: {}
+      }
     }
   },
 
@@ -39,36 +40,46 @@ module.exports = React.createClass({
     onLoggedStateChange(isLogged => {
       this.setState({isLogged})
     })
+
+    page('/sites', () =>
+      this.setState({route: {component: CardsView}})
+    )
+    page('/sites/:code', (ctx) =>
+      this.setState({route: {component: SiteDetail, props: ctx.params}})
+    )
+    page('/public/:code', (ctx) =>
+      this.setState({route: {component: SiteDetail, props: ctx.params}})
+    )
+    page('/account', () =>
+      this.setState({route: {component: UserAccount}})
+    )
+
+    page()
   },
 
   render () {
     return (
-      h(Router, {history: createBrowserHistory()}, [
-        h('div', [
-          h('nav.nav', [
-            h('.nav-left', [
-              h('a.nav-item', [
-                h('img', {src: '/favicon.ico', alt: 'trackingcode logo'})
-              ]),
-              h('a.nav-item', 'trackingco.de')
+      h('div', [
+        h('nav.nav', [
+          h('.nav-left', [
+            h('a.nav-item', [
+              h('img', {src: '/favicon.ico', alt: 'trackingcode logo'})
             ]),
-            h('.nav-center', [
-              this.state.isLogged
-              ? h(Link, {className: 'nav-item', to: '/account'}, 'account')
-              : '',
-              this.state.isLogged
-              ? h(Link, {className: 'nav-item', to: '/sites'}, 'sites')
-              : h('a.nav-item', {href: auth0.getLoginURL()}, 'login'),
-              this.state.isLogged
-              ? h('a.nav-item', {key: 'logout', onClick: auth0.logout}, 'logout')
-              : h('a.nav-item', {key: 'login', href: auth0.getLoginURL()}, 'start tracking your sites!')
-            ])
+            h('a.nav-item', 'trackingco.de')
           ]),
-          h(Route, {exact: true, path: '/sites', component: CardsView}),
-          h(Route, {exact: true, path: '/sites/:code', component: SiteDetail}),
-          h(Route, {exact: true, path: '/public/:code', component: SiteDetail}),
-          h(Route, {exact: true, path: '/account', component: UserAccount})
-        ])
+          h('.nav-center', [
+            this.state.isLogged
+            ? h('a', {className: 'nav-item', href: '/account'}, 'account')
+            : '',
+            this.state.isLogged
+            ? h('a', {className: 'nav-item', href: '/sites'}, 'sites')
+            : h('a.nav-item', {href: auth0.getLoginURL()}, 'login'),
+            this.state.isLogged
+            ? h('a.nav-item', {key: 'logout', onClick: auth0.logout}, 'logout')
+            : h('a.nav-item', {key: 'login', href: auth0.getLoginURL()}, 'start tracking your sites!')
+          ])
+        ]),
+        h(this.state.route.component, this.state.route.props)
       ])
     )
   }

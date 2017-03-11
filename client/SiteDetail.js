@@ -66,7 +66,7 @@ query d($code: String!, $last: Int, $l: Int, $s: Int, $r: String) {
   }
 }
     `, {
-      code: this.props.match.params.code,
+      code: this.props.code,
       last: last,
       l: this.state.sessionsLimit,
       s: this.state.sessionsMinScore,
@@ -103,8 +103,6 @@ query d($code: String!, $last: Int, $l: Int, $s: Int, $r: String) {
       return h('div')
     }
 
-    let isOwner = this.props.location.pathname.split('/')[1] === 'sites'
-
     return (
       h('.container', [
         h('.content', [
@@ -112,13 +110,11 @@ query d($code: String!, $last: Int, $l: Int, $s: Int, $r: String) {
           h('h6.subtitle.is-6', this.state.site.code)
         ]),
         this.state.dataMax === 0 && this.state.site.today.v === 0
-        ? isOwner
-          ? h(NoData, this.state)
-          : ''
+        ? h(NoData, this.state)
         : (
           h(Data, {
             ...this.state,
-            isOwner: isOwner,
+            isOwner: true,
             updateNLastDays: this.query,
             updateMinScore: v => { this.setState({sessionsMinScore: v}, this.query) },
             updateSessionsReferrerSelected: data => {
