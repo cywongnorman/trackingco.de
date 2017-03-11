@@ -12,6 +12,7 @@ const graphql = require('./graphql')
 const formatdate = require('./helpers').formatdate
 const coloursfragment = require('./helpers').coloursfragment
 const mergeColours = require('./helpers').mergeColours
+const title = require('./helpers').title
 const onLoggedStateChange = require('./auth').onLoggedStateChange
 
 const charts = {
@@ -206,7 +207,7 @@ const Data = React.createClass({
     let backgroundColor = mergeColours(this.props.me.colours).background
 
     return (
-      h(DocumentTitle, {title: this.props.site.name}, [
+      h(DocumentTitle, {title: title(this.props.site.name)}, [
         h(BodyStyle, {style: {backgroundColor}}, [
           h('.container', [
             h('.columns', [

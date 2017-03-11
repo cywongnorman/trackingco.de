@@ -10,6 +10,7 @@ const log = require('./log')
 const graphql = require('./graphql')
 const mergeColours = require('./helpers').mergeColours
 const coloursfragment = require('./helpers').coloursfragment
+const title = require('./helpers').title
 const onLoggedStateChange = require('./auth').onLoggedStateChange
 
 module.exports = React.createClass({
@@ -50,7 +51,7 @@ query {
     let backgroundColor = mergeColours(this.state.me.colours).background
 
     return (
-      h(DocumentTitle, {title: 'User account'}, [
+      h(DocumentTitle, {title: title('User account')}, [
         h(BodyStyle, {style: {backgroundColor}}, [
           h('.tile.is-ancestor', [
             h('.tile.is-12', [

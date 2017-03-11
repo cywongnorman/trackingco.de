@@ -11,6 +11,7 @@ const graphql = require('./graphql')
 const SiteCard = require('./SiteCard')
 const NewSiteCard = require('./NewSiteCard')
 const mergeColours = require('./helpers').mergeColours
+const title = require('./helpers').title
 const onLoggedStateChange = require('./auth').onLoggedStateChange
 
 const Dashboard = React.createClass({
@@ -52,7 +53,7 @@ query {
     let backgroundColor = mergeColours(this.state.me.colours).background
 
     return (
-      h(DocumentTitle, {title: 'sites'}, [
+      h(DocumentTitle, {title: title('your sites')}, [
         h(BodyStyle, {style: {backgroundColor}}, [
           h('.columns.is-multiline.is-mobile', this.state.me.sites.map((site, i) =>
             h('.column.is-2-widescreen.is-3-desktop.is-4-tablet.is-6-mobile', {

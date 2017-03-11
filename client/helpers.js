@@ -94,3 +94,5 @@ function mirror (value) {
     : 1 - (value % 1)
   : value
 }
+
+module.exports.title = name => name ? `${name} | trackingco.de` : 'trackingco.de'
