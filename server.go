@@ -27,13 +27,13 @@ func runServer() {
 	router.Get("/public/<code>", serveClient)
 
 	router.Post("/_graphql", func(c *routing.Context) error {
-		userId := extractUserIdFromJWT(c.RequestCtx)
-		if userId == "" {
-			userId = s.LoggedAs
+		email := extractEmailFromJWT(c.RequestCtx)
+		if email == "" {
+			email = s.LoggedAs
 		}
 		context := context.WithValue(
 			context.TODO(),
-			"loggeduser", userId,
+			"loggeduser", email,
 		)
 
 		var gqr GraphQLRequest
@@ -79,22 +79,27 @@ func (h HTTPError) Error() string {
 	return h.message
 }
 
-func extractUserIdFromJWT(ctx *fasthttp.RequestCtx) string {
+func extractEmailFromJWT(ctx *fasthttp.RequestCtx) string {
 	jwtbytes := ctx.Request.Header.Peek("Authorization")
 	if len(jwtbytes) == 0 {
-		return ""
+		jwtbytes = ctx.Request.Header.Peek("authorization")
+		if len(jwtbytes) == 0 {
+			log.Print("no jwt.")
+			return ""
+		}
 	}
 
 	token, err := jwt.Parse(string(jwtbytes), func(token *jwt.Token) (interface{}, error) {
 		return []byte(s.Auth0Secret), nil
 	})
 	if err != nil {
-		log.Print("failed to parse the jwt: ", err)
+		log.Print("failed to parse the jwt '", string(jwtbytes), "': ", err)
 		return ""
 	}
 
 	if token.Method != jwt.SigningMethodHS256 {
 		log.Print("expected jwt signed with HS256, but got ", token.Method)
+		return ""
 	}
 
 	if !token.Valid {
@@ -102,5 +107,5 @@ func extractUserIdFromJWT(ctx *fasthttp.RequestCtx) string {
 		return ""
 	}
 
-	return token.Claims["sub"].(string)
+	return token.Claims["https://trackingco.de/user/email"].(string)
 }

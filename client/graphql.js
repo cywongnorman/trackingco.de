@@ -5,9 +5,8 @@ const onLoggedStateChange = require('./auth').onLoggedStateChange
 const getToken = require('./auth').getToken
 
 // do object modification here:
-var headers = {
-  'Authorization': getToken()
-}
+var headers = {}
+
 onLoggedStateChange(isLogged => {
   headers['Authorization'] = getToken()
 })

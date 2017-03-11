@@ -146,7 +146,7 @@ var siteType = graphql.NewObject(
 			"code":       &graphql.Field{Type: graphql.String},
 			"name":       &graphql.Field{Type: graphql.String},
 			"created_at": &graphql.Field{Type: graphql.String},
-			"user_id":    &graphql.Field{Type: graphql.String},
+			"user_email": &graphql.Field{Type: graphql.String},
 			"shareURL": &graphql.Field{
 				Type:        graphql.String,
 				Description: "the URL to share this site's statistics. it is a blank string when the site is not shared.",
@@ -362,7 +362,7 @@ var userType = graphql.NewObject(
 	graphql.ObjectConfig{
 		Name: "User",
 		Fields: graphql.Fields{
-			"id": &graphql.Field{Type: graphql.String},
+			"email": &graphql.Field{Type: graphql.String},
 			"plan": &graphql.Field{
 				Type:        graphql.Float,
 				Description: "the plan this user is currently in.",
@@ -372,14 +372,14 @@ var userType = graphql.NewObject(
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 					var sites []Site
 					err = pg.Raw(`
-SELECT code, name, user_id, to_char(created_at, 'YYYYMMDD') AS created_at, shared
+SELECT code, name, user_email, to_char(created_at, 'YYYYMMDD') AS created_at, shared
   FROM sites
   INNER JOIN (
     SELECT unnest(sites_order) AS c,
            generate_subscripts(sites_order, 1) as o FROM users
   )t ON c = code
-WHERE user_id = ?
-ORDER BY o`, p.Source.(User).Id).Scan(&sites)
+WHERE user_email = ?
+ORDER BY o`, p.Source.(User).Email).Scan(&sites)
 					if err != nil {
 						return nil, err
 					}
@@ -410,13 +410,13 @@ var rootQuery = graphql.ObjectConfig{
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 				user := User{}
 				err = pg.Model(user).
-					Select("id, array_to_string(domains, ','), colours, plan").
-					Where("id = ?", userIdFromContext(p.Context)).
+					Select("email, array_to_string(domains, ','), colours, plan").
+					Where("email = ?", emailFromContext(p.Context)).
 					Scan(&user)
 				if err != nil {
 					return nil, err
 				}
-				if user.Id == "" {
+				if user.Email == "" {
 					return nil, errors.New("you must be logged in to query 'me'.")
 				}
 				return user, nil
@@ -440,7 +440,7 @@ var rootQuery = graphql.ObjectConfig{
 				if err != nil {
 					return nil, err
 				}
-				if site.UserId != userIdFromContext(p.Context) /* not owner */ &&
+				if site.UserEmail != emailFromContext(p.Context) /* not owner */ &&
 					!site.Shared /* not shared */ {
 					return nil, errors.New("you're not authorized to view this site.")
 				}
@@ -494,12 +494,12 @@ var rootMutation = graphql.ObjectConfig{
 				},
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				userId := userIdFromContext(p.Context)
-				code := makeCodeForUser(userId)
+				email := emailFromContext(p.Context)
+				code := makeCodeForUser(email)
 				site := Site{
-					Code:   code,
-					Name:   p.Args["name"].(string),
-					UserId: userId,
+					Code:      code,
+					Name:      p.Args["name"].(string),
+					UserEmail: email,
 				}
 
 				tx := pg.Begin()
@@ -509,8 +509,8 @@ var rootMutation = graphql.ObjectConfig{
 				}
 
 				err = tx.Exec(
-					`UPDATE users SET sites_order = array_append(sites_order, ?) WHERE id = ?`,
-					site.Code, userId)
+					`UPDATE users SET sites_order = array_append(sites_order, ?) WHERE email = ?`,
+					site.Code, email)
 				if err != nil {
 					tx.Rollback()
 					return nil, err
@@ -539,7 +539,7 @@ var rootMutation = graphql.ObjectConfig{
 				if err != nil {
 					return nil, err
 				}
-				if site.UserId != userIdFromContext(p.Context) {
+				if site.UserEmail != emailFromContext(p.Context) {
 					return nil, errors.New("you're not authorized to update this site.")
 				}
 				site.Name = p.Args["name"].(string)
@@ -558,14 +558,14 @@ var rootMutation = graphql.ObjectConfig{
 				},
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				userId := userIdFromContext(p.Context)
+				email := emailFromContext(p.Context)
 				code := p.Args["code"].(string)
 
 				tx := pg.Begin()
 
 				err = tx.Exec(
-					`DELETE FROM sites WHERE code = ? AND user_id = ?`,
-					code, userId,
+					`DELETE FROM sites WHERE code = ? AND user_email = ?`,
+					code, email,
 				)
 				if err != nil {
 					tx.Rollback()
@@ -573,8 +573,8 @@ var rootMutation = graphql.ObjectConfig{
 				}
 
 				err = tx.Exec(
-					`UPDATE users SET sites_order = array_remove(sites_order, ?) WHERE id = ?`,
-					code, userId,
+					`UPDATE users SET sites_order = array_remove(sites_order, ?) WHERE email = ?`,
+					code, email,
 				)
 				if err != nil {
 					tx.Rollback()
@@ -598,7 +598,7 @@ var rootMutation = graphql.ObjectConfig{
 				},
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				userId := userIdFromContext(p.Context)
+				email := emailFromContext(p.Context)
 				icodes := p.Args["order"].([]interface{})
 				codes := make([]string, len(icodes))
 				for i, icode := range icodes {
@@ -606,8 +606,8 @@ var rootMutation = graphql.ObjectConfig{
 				}
 				order := strings.Join(codes, "@^~^@")
 				err = pg.Exec(
-					`UPDATE users SET sites_order = string_to_array(?, '@^~^@') WHERE id = ?`,
-					order, userId)
+					`UPDATE users SET sites_order = string_to_array(?, '@^~^@') WHERE email = ?`,
+					order, email)
 				if err != nil {
 					return Result{false, err.Error()}, err
 				}
@@ -627,12 +627,12 @@ var rootMutation = graphql.ObjectConfig{
 				},
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				userId := userIdFromContext(p.Context)
+				email := emailFromContext(p.Context)
 				code := p.Args["code"].(string)
 				share := p.Args["share"].(bool)
 				err = pg.Exec(
-					`UPDATE sites SET shared = ? WHERE code = ? and user_id = ?`,
-					share, code, userId)
+					`UPDATE sites SET shared = ? WHERE code = ? and user_email = ?`,
+					share, code, email)
 				if err != nil {
 					return Result{false, err.Error()}, err
 				}
@@ -647,7 +647,7 @@ var rootMutation = graphql.ObjectConfig{
 				},
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				userId := userIdFromContext(p.Context)
+				email := emailFromContext(p.Context)
 				host := p.Args["hostname"].(string)
 
 				data := map[string]string{"hostname": host}
@@ -666,8 +666,8 @@ var rootMutation = graphql.ObjectConfig{
 				}
 
 				err = pg.Exec(
-					`UPDATE users SET domains = array_append(array_remove(domains, ?), ?) WHERE id = ?`,
-					host, host, userId)
+					`UPDATE users SET domains = array_append(array_remove(domains, ?), ?) WHERE email = ?`,
+					host, host, email)
 				if err != nil {
 					return Result{false, err.Error()}, err
 				}
@@ -682,7 +682,7 @@ var rootMutation = graphql.ObjectConfig{
 				},
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				userId := userIdFromContext(p.Context)
+				email := emailFromContext(p.Context)
 				host := p.Args["hostname"].(string)
 
 				resp, err := herokuDomains("DELETE", "/"+host, nil)
@@ -700,8 +700,8 @@ var rootMutation = graphql.ObjectConfig{
 				}
 
 				err = pg.Exec(
-					`UPDATE users SET domains = array_remove(domains, ?) WHERE id = ?`,
-					host, userId)
+					`UPDATE users SET domains = array_remove(domains, ?) WHERE email = ?`,
+					host, email)
 				if err != nil {
 					return Result{false, err.Error()}, err
 				}
@@ -717,7 +717,7 @@ var rootMutation = graphql.ObjectConfig{
 				},
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				userId := userIdFromContext(p.Context)
+				email := emailFromContext(p.Context)
 				colours := make(igor.JSON)
 
 				for field, colour := range p.Args["colours"].(map[string]interface{}) {
@@ -725,8 +725,8 @@ var rootMutation = graphql.ObjectConfig{
 				}
 
 				err = pg.Exec(
-					`UPDATE users SET colours = ? WHERE id = ?`,
-					colours, userId)
+					`UPDATE users SET colours = ? WHERE email = ?`,
+					colours, email)
 				if err != nil {
 					return Result{false, err.Error()}, err
 				}
@@ -739,15 +739,15 @@ var rootMutation = graphql.ObjectConfig{
 
 func fetchSite(code string) (site Site, err error) {
 	err = pg.Model(site).
-		Select("code, name, user_id, to_char(created_at, 'YYYYMMDD') AS created_at, shared").
+		Select("code, name, user_email, to_char(created_at, 'YYYYMMDD') AS created_at, shared").
 		Where("code = ?", code).
 		Scan(&site)
 	return site, err
 }
 
-func userIdFromContext(ctx context.Context) string {
-	if userId, ok := ctx.Value("loggeduser").(string); ok {
-		return userId
+func emailFromContext(ctx context.Context) string {
+	if email, ok := ctx.Value("loggeduser").(string); ok {
+		return email
 	}
 	return ""
 }

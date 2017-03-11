@@ -22,7 +22,7 @@ func daily() {
 
 	for _, site := range sites {
 		log.Print("-------------")
-		log.Print(" > site ", site.Code, " (", site.Name, "), from ", site.UserId, ":")
+		log.Print(" > site ", site.Code, " (", site.Name, "), from ", site.UserEmail, ":")
 
 		stats := compendiumFromRedis(site.Code, day)
 		log.Print(stats)

@@ -1,5 +1,5 @@
 CREATE TABLE users (
-  id text primary key,
+  email text primary key,
   sites_order text[],
   colours jsonb,
   domains text[] NOT NULL DEFAULT '{}',
@@ -8,7 +8,7 @@ CREATE TABLE users (
 
 CREATE TABLE sites (
   code text primary key,
-  user_id text REFERENCES users(id),
+  user_email text REFERENCES users(email),
   name text,
   shared boolean DEFAULT false,
   created_at date DEFAULT now()

@@ -37,7 +37,7 @@ type SessionGroup struct {
 }
 
 type User struct {
-	Id      string    `json:"id" igor:"primary_key"`
+	Email   string    `json:"email" igor:"primary_key"`
 	Domains string    `json:"domains"` // actually an array of domains comma-separated.
 	Colours igor.JSON `json:"colours"`
 	Plan    float64   `json:"plan"`
@@ -52,7 +52,7 @@ func (_ User) TableName() string { return "users" }
 type Site struct {
 	Code      string `json:"code,omitempty" igor:"primary_key"`
 	Name      string `json:"name,omitempty"`
-	UserId    string `json:"user_id,omitempty"`
+	UserEmail string `json:"user_email,omitempty"`
 	CreatedAt string `json:"created_at,omitempty"`
 	Shared    bool   `json:"shared,omitempty"`
 

@@ -31,15 +31,6 @@ module.exports.auth0 = {
 
   parseHash (hash, cb) {
     auth0.parseHash(hash, cb)
-  },
-
-  getUserInfo (idToken) {
-    return window.fetch('https://trackingcode.auth0.com/userinfo', {
-      method: 'GET',
-      headers: {'Authorization': 'Bearer ' + idToken},
-      mode: 'cors'
-    })
-      .then(r => r.json())
   }
 }
 
@@ -54,12 +45,18 @@ setTimeout(() => { loggedSync.start(false) }, 1)
 
 module.exports.setToken = function setToken (token) {
   if (token !== module.exports.getToken()) {
-    localStorage.setItem('_tcj', token)
+    localStorage.setItem('_tcj', JSON.stringify(token))
     loggedSync.trigger(!!token)
-    loggedEmitter.emit(!!token)
+    loggedEmitter.emit('logged', !!token)
   }
 }
-module.exports.getToken = function getToken () { return localStorage.getItem('_tcj') }
+module.exports.getToken = function getToken () {
+  try {
+    return JSON.parse(localStorage.getItem('_tcj'))
+  } catch (e) {
+    return null
+  }
+}
 module.exports.onLoggedStateChange = function onLoggedStateChange (cb) {
   cb(!!module.exports.getToken())
   loggedEmitter.on('logged', cb)

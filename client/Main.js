@@ -25,7 +25,7 @@ module.exports = React.createClass({
       this.setState({isLogged})
     })
 
-    if (location.hash && location.hash.indexOf('token')) {
+    if (location.hash && location.hash.indexOf('token') !== -1) {
       auth0.parseHash(location.hash, (err, result) => {
         if (err) {
           log.error("error parsing account credentials, you'll be logged out.")
@@ -35,7 +35,7 @@ module.exports = React.createClass({
         }
 
         log.success("You're now logged in!")
-        setToken(result.id_token)
+        setToken(result.idToken || result.id_token)
         location.hash = ''
       })
     }
@@ -60,8 +60,8 @@ module.exports = React.createClass({
               ? h(Link, {className: 'nav-item', to: '/sites'}, 'sites')
               : h('a.nav-item', {href: auth0.getLoginURL()}, 'login'),
               this.state.isLogged
-              ? h('a.nav-item', {onClick: auth0.logout}, 'logout')
-              : h('a.nav-item', {href: auth0.getLoginURL()}, 'start tracking your sites!')
+              ? h('a.nav-item', {key: 'logout', onClick: auth0.logout}, 'logout')
+              : h('a.nav-item', {key: 'login', href: auth0.getLoginURL()}, 'start tracking your sites!')
             ])
           ]),
           h(Route, {exact: true, path: '/sites', component: CardsView}),
