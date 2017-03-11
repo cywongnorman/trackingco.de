@@ -21,10 +21,6 @@ module.exports = React.createClass({
   },
 
   componentDidMount () {
-    onLoggedStateChange(isLogged => {
-      this.setState({isLogged})
-    })
-
     if (location.hash && location.hash.indexOf('token') !== -1) {
       auth0.parseHash(location.hash, (err, result) => {
         if (err) {
@@ -39,6 +35,10 @@ module.exports = React.createClass({
         location.hash = ''
       })
     }
+
+    onLoggedStateChange(isLogged => {
+      this.setState({isLogged})
+    })
   },
 
   render () {

@@ -27,6 +27,7 @@ query {
   me {
     colours { ...${coloursfragment} }
     domains
+    email
     plan
   }
 }
@@ -118,7 +119,8 @@ query {
                         h('.card-header-title', 'Account information')
                       ]),
                       h('.card-content', [
-                        JSON.stringify(this.state.me.meta)
+                        h('p', this.state.me.email),
+                        h('p', this.state.me.plan)
                       ])
                     ])
                   ])

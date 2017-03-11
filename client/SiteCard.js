@@ -114,7 +114,7 @@ query c($code: String!) {
             ]
             : [
               h(Link, {className: 'card-footer-item', to: `/sites/${this.props.code}`}, 'view'),
-              h('a.card-footer-item', {onClick: () => { this.setState({editing: true}) }}, 'edit'),
+              h('a.card-footer-item', {onClick: () => { this.setState({editing: true}) }}, 'rename'),
               h('a.card-footer-item', {onClick: () => { this.setState({deleting: true}) }}, 'delete')
             ]
         )

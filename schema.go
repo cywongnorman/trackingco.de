@@ -362,10 +362,15 @@ var userType = graphql.NewObject(
 	graphql.ObjectConfig{
 		Name: "User",
 		Fields: graphql.Fields{
-			"email": &graphql.Field{Type: graphql.String},
+			"email": &graphql.Field{
+				Type: graphql.String,
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					return emailFromContext(p.Context), nil
+				},
+			},
 			"plan": &graphql.Field{
 				Type:        graphql.Float,
-				Description: "the plan this user is currently in.",
+				Description: "the billing plan this user is currently in.",
 			},
 			"sites": &graphql.Field{
 				Type: graphql.NewList(siteType),
