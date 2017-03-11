@@ -32,12 +32,6 @@ func track(c *routing.Context) error {
 		return HTTPError{400, "didn't send tracking code."}
 	}
 
-	// points
-	points, err := strconv.Atoi(string(c.FormValue("p")))
-	if err != nil || points < 1 {
-		points = 1
-	}
-
 	// page
 	upage, err := url.Parse(string(c.Referer()))
 	if err != nil {
@@ -52,6 +46,20 @@ func track(c *routing.Context) error {
 	}
 	if upage.RawQuery != "" {
 		page = page + "?" + upage.RawQuery
+	}
+
+	// points
+	points, err := strconv.Atoi(string(c.FormValue("p")))
+	if err != nil {
+		// if a call to tc() is made with no arguments,
+		// it means "p" is blank, so track as if point were 1.
+		points = 1
+	} else {
+		// if tc() is called with a number of points as an argument,
+		// "p" will have a value, which will be stored at `points`.
+		// that means we shouldn't track a pageview.
+		// pageviews are only tracked from blank tc() calls.
+		page = ""
 	}
 
 	// referrer

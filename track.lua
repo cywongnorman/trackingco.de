@@ -18,6 +18,7 @@ if vo == "" then vo = 0 else vo = tonumber(vo) end
 
 vo = vo+tonumber(ARGV[5])
 if vo > 99 then vo = 99 end
+if vo < 1 then vo = 1 end
 vo = tostring(vo)
 if string.len(vo) == 1 then
   vo = "0" .. vo
@@ -27,7 +28,9 @@ redis.call("HSET", sk, su, ss)
 
 redis.call("EXPIRE", sk, ex)
 
-redis.call("HINCRBY", KEYS[1], ARGV[1], 1)
-redis.call("EXPIRE", KEYS[1], ex)
+if ARGV[1] ~= "" then
+  redis.call("HINCRBY", KEYS[1], ARGV[1], 1)
+  redis.call("EXPIRE", KEYS[1], ex)
+end
 
 return of

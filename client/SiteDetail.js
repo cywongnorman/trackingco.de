@@ -433,7 +433,7 @@ const Data = React.createClass({
                       h('.content', [
                         h('p', 'Paste the following in any part of your site:'),
                         h('pre', [
-                          h('code', `<script>;${snippet(this.props.site.code)};</script>`)
+                          h('code', `<script>;${snippet(this.props.site.code, this.props.me.domains[0])};</script>`)
                         ])
                       ])
                     ])
