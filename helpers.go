@@ -48,10 +48,10 @@ func randomNumber(r int) int {
 	return rand.Intn(r)
 }
 
-func compendiumFromRedis(code, day string) Compendium {
+func dayFromRedis(code, day string) Day {
 	key := redisKeyFactory(code, day)
 
-	compendium := Compendium{
+	compendium := Day{
 		Id:       makeBaseKey(code, day),
 		Sessions: make(map[string]string),
 		Pages:    make(map[string]int),
@@ -152,4 +152,17 @@ type herokuDomainResponse struct {
 	Message  string `json:"message"`
 	Hostname string `json:"hostname"`
 	Status   string `json:"string"`
+}
+
+func sessionsFromScoremap(scoremap string) []int {
+	l := len(scoremap)
+	nsessions := (l - 1) / 2
+	sessions := make([]int, nsessions)
+	for s := 0; s < nsessions; s++ {
+		if l >= s*2+3 {
+			score, _ := strconv.Atoi(scoremap[s*2+1 : s*2+3])
+			sessions[s] = score
+		}
+	}
+	return sessions
 }

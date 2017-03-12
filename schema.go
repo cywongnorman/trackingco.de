@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/fjl/go-couchdb"
@@ -85,9 +84,9 @@ var sessionGroupType = graphql.NewObject(
 	},
 )
 
-var compendiumType = graphql.NewObject(
+var dayType = graphql.NewObject(
 	graphql.ObjectConfig{
-		Name:        "Compendium",
+		Name:        "Day",
 		Description: "A day, or a month, maybe an year -- a period of time for which there are stats",
 		Fields: graphql.Fields{
 			"day": &graphql.Field{
@@ -99,7 +98,7 @@ var compendiumType = graphql.NewObject(
 				Description: "total number of pageviews.",
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 					totalpages := 0
-					for _, count := range p.Source.(Compendium).Pages {
+					for _, count := range p.Source.(Day).Pages {
 						totalpages += count
 					}
 					return totalpages, nil
@@ -110,7 +109,7 @@ var compendiumType = graphql.NewObject(
 				Description: "total number of sessions.",
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 					totalsessions := 0
-					for _, scoremap := range p.Source.(Compendium).Sessions {
+					for _, scoremap := range p.Source.(Day).Sessions {
 						totalsessions += (len(scoremap) - 1) / 2
 					}
 					return totalsessions, nil
@@ -122,12 +121,11 @@ var compendiumType = graphql.NewObject(
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 					totalsessions := 0
 					totalbounces := 0
-					for _, scoremap := range p.Source.(Compendium).Sessions {
-						l := len(scoremap)
-						nsessions := (l - 1) / 2
-						totalsessions += nsessions
-						for s := 0; s < nsessions; s++ {
-							if l >= s*2+3 && scoremap[s*2+1:s*2+3] == "01" {
+					for _, scoremap := range p.Source.(Day).Sessions {
+						sessions := sessionsFromScoremap(scoremap)
+						for _, score := range sessions {
+							totalsessions += 1
+							if score == 1 {
 								totalbounces += 1
 							}
 						}
@@ -159,10 +157,10 @@ var siteType = graphql.NewObject(
 				},
 			},
 			"days": &graphql.Field{
-				Type: graphql.NewList(compendiumType),
+				Type: graphql.NewList(dayType),
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 					site := p.Source.(Site)
-					days := make([]Compendium, site.lastDays)
+					days := make([]Day, site.lastDays)
 
 					// fill in missing days with zeroes
 					today := presentDay()
@@ -189,8 +187,8 @@ var siteType = graphql.NewObject(
 				Description: "a list of entries of referrers, sorted by the number of occurrences.",
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 					all := make(map[string]int)
-					for _, compendium := range p.Source.(Site).couchDays {
-						for ref, scoremap := range compendium.Sessions {
+					for _, day := range p.Source.(Site).couchDays {
+						for ref, scoremap := range day.Sessions {
 							count := (len(scoremap) - 1) / 2
 							if prevcount, exists := all[ref]; exists {
 								all[ref] = prevcount + count
@@ -200,12 +198,7 @@ var siteType = graphql.NewObject(
 						}
 					}
 
-					entries := make([]Entry, len(all))
-					i := 0
-					for ref, count := range all {
-						entries[i] = Entry{ref, count}
-						i++
-					}
+					entries := EntriesFromMap(all)
 					sort.Sort(sort.Reverse(EntrySort(entries)))
 
 					return entries, nil
@@ -216,8 +209,8 @@ var siteType = graphql.NewObject(
 				Description: "a list of entries of viewed pages, sorted by the number of occurrences.",
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 					all := make(map[string]int)
-					for _, compendium := range p.Source.(Site).couchDays {
-						for addr, count := range compendium.Pages {
+					for _, day := range p.Source.(Site).couchDays {
+						for addr, count := range day.Pages {
 							if prevcount, exists := all[addr]; exists {
 								all[addr] = prevcount + count
 							} else {
@@ -226,12 +219,7 @@ var siteType = graphql.NewObject(
 						}
 					}
 
-					entries := make([]Entry, len(all))
-					i := 0
-					for addr, count := range all {
-						entries[i] = Entry{addr, count}
-						i++
-					}
+					entries := EntriesFromMap(all)
 					sort.Sort(sort.Reverse(EntrySort(entries)))
 
 					return entries, nil
@@ -272,24 +260,21 @@ var siteType = graphql.NewObject(
 								continue
 							}
 
+							sessions := sessionsFromScoremap(scoremap)
+
 							if _, exists := byref[ref]; !exists {
-								byref[ref] = make([]int, 0)
+								byref[ref] = make([]int, 0, len(sessions))
 							}
 
-							l := len(scoremap)
-							nsessions := (l - 1) / 2
-							for s := 0; s < nsessions; s++ {
-								if l >= s*2+3 {
-									score, err := strconv.Atoi(scoremap[s*2+1 : s*2+3])
-									if err != nil || score < minscore {
-										continue
-									}
-									byref[ref] = append(byref[ref], score)
-									count++
+							for _, score := range sessions {
+								if score < minscore {
+									continue
+								}
+								byref[ref] = append(byref[ref], score)
 
-									if count >= limit {
-										goto finish
-									}
+								count++
+								if count >= limit {
+									goto finish
 								}
 							}
 						}
@@ -307,16 +292,16 @@ var siteType = graphql.NewObject(
 				},
 			},
 			"today": &graphql.Field{
-				Type: compendiumType,
+				Type: dayType,
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 					sitecode := p.Source.(Site).Code
 					today := presentDay().Format(DATEFORMAT)
-					compendium := compendiumFromRedis(sitecode, today)
-					compendium.Day = today
-					return compendium, nil
+					day := dayFromRedis(sitecode, today)
+					day.Day = today
+					return day, nil
 				},
 			},
-			"months": &graphql.Field{Type: graphql.NewList(compendiumType)},
+			"months": &graphql.Field{Type: graphql.NewList(dayType)},
 		},
 	},
 )
@@ -450,7 +435,7 @@ var rootQuery = graphql.ObjectConfig{
 					return nil, errors.New("you're not authorized to view this site.")
 				}
 
-				// do we need to fetch the compendium list from couchdb?
+				// do we need to fetch the day list from couchdb?
 				site.lastDays = p.Args["last"].(int)
 				if site.lastDays <= 0 {
 					// no.
@@ -469,7 +454,7 @@ var rootQuery = graphql.ObjectConfig{
 				if err != nil {
 					return nil, err
 				}
-				site.couchDays = res.toCompendiumList()
+				site.couchDays = res.toDayList()
 
 				return site, nil
 			},
