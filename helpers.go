@@ -13,7 +13,10 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-const DATEFORMAT = "20060102"
+const (
+	DATEFORMAT  = "20060102"
+	MONTHFORMAT = "200601"
+)
 
 func presentDay() time.Time {
 	now := time.Now().UTC()
@@ -28,6 +31,7 @@ func redisKeyFactory(code, day string) func(string) string {
 		return basekey + ":" + subkey
 	}
 }
+func makeMonthKey(code, month string) string { return code + "." + month }
 
 func makeCodeForUser(userId string) string {
 	userNumber := 0

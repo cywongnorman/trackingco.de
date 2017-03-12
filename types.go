@@ -22,6 +22,25 @@ type Day struct {
 	Pages map[string]int `json:"p"`
 }
 
+type Month struct {
+	Id    string `json:"_id,omitempty"`
+	Rev   string `json:"_rev,omitempty"`
+	Month string `json:"month,omitempty"`
+
+	// the average bounce rate for this month, in units of 10000
+	// (for example, if the bounce rate is 43,78% it will be stored as 4378)
+	BounceRate int `json:"b"`
+	Sessions   int `json:"s"` // total number of sessions in this month
+	Pageviews  int `json:"v"` // total number of pageviews in this month
+	Score      int `json:"c"` // the total score (sum of all session scores)
+
+	// the top 10 referrers for this month, with their respective counts
+	TopReferrers map[string]int `json:"r"`
+
+	// the top 10 pages viewed this month, with their respective counts
+	TopPages map[string]int `json:"p"`
+}
+
 type Entry struct {
 	Address string `json:"a"`
 	Count   int    `json:"c"`
@@ -35,6 +54,13 @@ func EntriesFromMap(dict map[string]int) []Entry {
 		i++
 	}
 	return entries
+}
+func MapFromEntries(entries []Entry) map[string]int {
+	dict := make(map[string]int, len(entries))
+	for _, entry := range entries {
+		dict[entry.Address] = entry.Count
+	}
+	return dict
 }
 
 type EntrySort []Entry
@@ -71,10 +97,10 @@ type Site struct {
 	lastDays  int
 	couchDays []Day
 
-	ShareURL string `json:"shareURL,omitempty" sql:"-"`
-	Days     []Day  `json:"days,omitempty" sql:"-"`
-	Months   []Day  `json:"months,omitempty" sql:"-"`
-	Today    Day    `json:"today,omitempty" sql:"-"`
+	ShareURL string  `json:"shareURL,omitempty" sql:"-"`
+	Days     []Day   `json:"days,omitempty" sql:"-"`
+	Months   []Month `json:"months,omitempty" sql:"-"`
+	Today    Day     `json:"today,omitempty" sql:"-"`
 }
 
 func (_ Site) TableName() string { return "sites" }
