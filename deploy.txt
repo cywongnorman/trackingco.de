@@ -1,6 +1,7 @@
 
-* timezone in the webserver and in the computer that runs the routines must be the same (EST, in the present case):
-  heroku config:add TZ="America/New_York"
+* timezone in heroku and in the server that runs the routines must be UTC.
+  heroku config:add TZ="Etc/UTC"
+  sudo dpkg-reconfigure tzdata
 * cronjobs must be set:
- 01   19    *   *   *    /home/fiatjaf/comp/go/bin/godotenv -f /home/fiatjaf/comp/go/src/github.com/fiatjaf/trackingco.de/.env /home/fiatjaf/comp/go/bin/trackingco.de daily >> /home/fiatjaf/comp/go/src/github.com/fiatjaf/trackingco.de/daily.log 2>&1
+ 01   01    *   *   *    /home/fiatjaf/comp/go/bin/godotenv -f /home/fiatjaf/comp/go/src/github.com/fiatjaf/trackingco.de/.env /home/fiatjaf/comp/go/bin/trackingco.de daily >> /home/fiatjaf/comp/go/src/github.com/fiatjaf/trackingco.de/daily.log 2>&1
  14    5    1   *   *    /home/fiatjaf/comp/go/bin/godotenv -f /home/fiatjaf/comp/go/src/github.com/fiatjaf/trackingco.de/.env /home/fiatjaf/comp/go/bin/trackingco.de monthly >> /home/fiatjaf/comp/go/src/github.com/fiatjaf/trackingco.de/monthly.log 2>&1
