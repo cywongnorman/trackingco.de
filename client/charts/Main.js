@@ -49,7 +49,7 @@ const Tooltip = function (props) {
   return (
     h('div.custom-tooltip', [
       h('p.recharts-tooltip-label', formatdate(props.label)),
-      h('ul.recharts-tooltip-item-list', props.payload.map(item =>
+      h('ul.recharts-tooltip-item-list', props.payload.reverse().map(item =>
         h('li.recharts-tooltip-item', {style: {color: item.color}}, [
           h('span.recharts-tooltip-item-name', names[item.name]),
           h('span.recharts-tooltip-item-separator', ' : '),

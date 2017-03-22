@@ -6,6 +6,7 @@ const log = require('./log')
 const CardsView = require('./CardsView')
 const SiteDetail = require('./SiteDetail')
 const UserAccount = require('./UserAccount')
+
 const auth0 = require('./auth').auth0
 const setToken = require('./auth').setToken
 const onLoggedStateChange = require('./auth').onLoggedStateChange
@@ -48,7 +49,12 @@ module.exports = React.createClass({
       this.setState({route: {component: SiteDetail, props: ctx.params}})
     )
     page('/public/:code', (ctx) =>
-      this.setState({route: {component: SiteDetail, props: ctx.params}})
+      this.setState({
+        route: {
+          component: SiteDetail,
+          props: {...ctx.params, public: true}
+        }
+      })
     )
     page('/account', () =>
       this.setState({route: {component: UserAccount}})

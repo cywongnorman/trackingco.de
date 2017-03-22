@@ -73,7 +73,7 @@ query c($code: String!) {
             ? h('span', {
               contentEditable: true,
               onInput: e => {
-                this.setState({editingName: e.target.innerHTML.trim()})
+                this.setState({editingName: e.target.textContent.trim()})
               },
               ref: el => { el && el.focus() },
               dangerouslySetInnerHTML: {

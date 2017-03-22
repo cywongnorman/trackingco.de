@@ -406,9 +406,6 @@ var rootQuery = graphql.ObjectConfig{
 				if err != nil {
 					return nil, err
 				}
-				if user.Email == "" {
-					return nil, errors.New("you must be logged in to query 'me'.")
-				}
 				return user, nil
 			},
 		},
