@@ -118,6 +118,10 @@ nav.nav {
 
 .card.account-domains li:not(:last-child) { margin-bottom: 5px; }
 
+.graphiql-container {
+  min-height: 700px;
+}
+
 /* balloons.css */
 button[title] {
   overflow: visible;

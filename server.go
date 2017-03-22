@@ -25,6 +25,7 @@ func runServer() {
 	router.Get("/account", serveClient)
 	router.Get("/sites/<code>", serveClient)
 	router.Get("/public/<code>", serveClient)
+	router.Get("/_graphql", serveClient)
 
 	router.Post("/_graphql", func(c *routing.Context) error {
 		email := extractEmailFromJWT(c.RequestCtx)

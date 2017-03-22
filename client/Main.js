@@ -6,6 +6,8 @@ const log = require('./log')
 const CardsView = require('./CardsView')
 const SiteDetail = require('./SiteDetail')
 const UserAccount = require('./UserAccount')
+const GraphiQL = require('./GraphiQL')
+
 const auth0 = require('./auth').auth0
 const setToken = require('./auth').setToken
 const onLoggedStateChange = require('./auth').onLoggedStateChange
@@ -52,6 +54,9 @@ module.exports = React.createClass({
     )
     page('/account', () =>
       this.setState({route: {component: UserAccount}})
+    )
+    page('/_graphql', () =>
+      this.setState({route: {component: GraphiQL}})
     )
 
     page()
