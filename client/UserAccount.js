@@ -13,7 +13,7 @@ const coloursfragment = require('./helpers').coloursfragment
 const title = require('./helpers').title
 const onLoggedStateChange = require('./auth').onLoggedStateChange
 
-module.exports = React.createClass({
+const UserAccount = React.createClass({
   getInitialState () {
     return {
       me: null,
@@ -252,3 +252,5 @@ const Colours = withClickOutside(React.createClass({
     this.setState({display: null})
   }
 }))
+
+module.exports = UserAccount

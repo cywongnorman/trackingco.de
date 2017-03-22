@@ -20,7 +20,7 @@ const charts = {
   SessionsByReferrer: require('./charts/SessionsByReferrer')
 }
 
-module.exports = React.createClass({
+const SiteDetail = React.createClass({
   getInitialState () {
     return {
       site: null,
@@ -522,3 +522,5 @@ const TangleChangeMinScore = function (props) {
     ])
   )
 }
+
+module.exports = SiteDetail
