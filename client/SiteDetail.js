@@ -5,6 +5,8 @@ const TangleText = require('react-tangle')
 const throttle = require('throttleit')
 const DocumentTitle = require('react-document-title')
 const BodyStyle = require('body-style')
+const urlTrie = require('url-trie')
+const reduceObject = require('just-reduce-object')
 
 const log = require('./log')
 const snippet = require('./snippet')
@@ -177,6 +179,7 @@ const Data = React.createClass({
     return {
       pagesOpen: false,
       referrersOpen: false,
+      referrersTrie: null,
       showSnippet: false,
       showAbout: false
     }
@@ -188,11 +191,41 @@ const Data = React.createClass({
     if (!this.state.pagesOpen) {
       pages = this.props.site.pages.slice(0, 12)
     }
-    let referrersMore = this.props.site.referrers.length > 12
-    var referrers = this.props.site.referrers
-    if (!this.state.referrersOpen) {
-      referrers = this.props.site.referrers.slice(0, 12)
+
+    // the trie magic for referrers
+    var referrersTrie
+    if (this.state.referrersTrie) {
+      referrersTrie = this.state.referrersTrie
+    } else {
+      referrersTrie = urlTrie(
+        this.props.site.referrers.map(({a, c}) => ({url: a, count: c}))
+      , true)
     }
+
+    var referrers = []
+    for (let id in referrersTrie) {
+      if (id === 'prev') continue
+
+      let data = referrersTrie[id]
+      let countdeep = data.next
+        ? reduceObject(data.next, (acc, _, val) => acc + val.count, 0)
+        : 0
+      referrers.push({
+        addr: id,
+        countdeep,
+        counthere: data.count - countdeep,
+        href: data.url,
+        more: data.next
+      })
+    }
+
+    referrers.sort((a, b) => (b.countdeep + b.counthere) - (a.countdeep + a.counthere))
+
+    let referrersMore = referrers.length > 12
+    if (!this.state.referrersOpen) {
+      referrers = referrers.slice(0, 12)
+    }
+    // ~
 
     let individualSessions = charts.SessionsByReferrer.sessionGroupsToIndividual(
         this.props.site.sessionsbyreferrer
@@ -328,19 +361,41 @@ const Data = React.createClass({
                   ]),
                   h('.card-content', [
                     h('table.table', [
-                      h('tbody', referrers.map(({a: addr, c: count}) =>
+                      this.state.referrersTrie && h('thead', [
+                        h('tr', [
+                          h('td', {colSpan: 3, style: {textAlign: 'right'}}, [
+                            h('a', {
+                              onClick: e => {
+                                e.preventDefault()
+                                let prev = referrersTrie.prev
+                                delete referrersTrie.prev
+                                this.setState({referrersTrie: prev})
+                              }
+                            }, '↥')
+                          ])
+                        ])
+                      ]),
+                      h('tbody', referrers.map(({addr, counthere, countdeep, href, more}) =>
                         h('tr', [
                           h('td', [
                             addr + ' ',
-                            addr === '<direct>'
-                            ? ''
-                            : (
-                              h('a', {target: '_blank', href: addr}, [
+                            href && addr !== '<direct>' && (
+                              h('a', {target: '_blank', href}, [
                                 h('img', {src: `data:image/svg+xml,<%3Fxml%20version%3D"1.0"%20encoding%3D"UTF-8"%20standalone%3D"no"%3F><svg%20xmlns%3D"http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg"%20width%3D"12"%20height%3D"12"><path%20fill%3D"%23fff"%20stroke%3D"%2306c"%20d%3D"M1.5%204.518h5.982V10.5H1.5z"%2F><path%20d%3D"M5.765%201H11v5.39L9.427%207.937l-1.31-1.31L5.393%209.35l-2.69-2.688%202.81-2.808L4.2%202.544z"%20fill%3D"%2306f"%2F><path%20d%3D"M9.995%202.004l.022%204.885L8.2%205.07%205.32%207.95%204.09%206.723l2.882-2.88-1.85-1.852z"%20fill%3D"%23fff"%2F><%2Fsvg>`})
                               ])
                             )
                           ]),
-                          h('td', count)
+                          h('td', counthere),
+                          h('td', more && [
+                            h('a', {
+                              onClick: e => {
+                                e.preventDefault()
+                                more.prev = this.state.referrersTrie
+                                this.setState({referrersTrie: more})
+                              },
+                              title: `other ${countdeep} URL${countdeep !== 1 ? 's in paths' : ' in a path'} after this`
+                            }, `↦ ${countdeep}`)
+                          ])
                         ])
                       ))
                     ]),
