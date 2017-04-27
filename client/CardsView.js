@@ -1,7 +1,6 @@
 const React = require('react')
 const h = require('react-hyperscript')
 const DragDropContext = require('react-dnd').DragDropContext
-const TouchBackend = require('react-dnd-touch-backend')
 const HTML5Backend = require('react-dnd-html5-backend')
 const DocumentTitle = require('react-document-title')
 const BodyStyle = require('body-style')
@@ -109,8 +108,4 @@ query {
   }
 })
 
-let backend = 'ontouchstart' in window || navigator.msMaxTouchPoints
-  ? TouchBackend
-  : HTML5Backend
-
-module.exports = DragDropContext(backend)(Dashboard)
+module.exports = DragDropContext(HTML5Backend)(Dashboard)
