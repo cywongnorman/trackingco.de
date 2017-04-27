@@ -14,10 +14,7 @@ const SiteCard = React.createClass({
   getInitialState () {
     return {
       site: null,
-      me: null,
-      editing: false,
-      deleting: false,
-      editingName: ''
+      me: null
     }
   },
 
@@ -69,22 +66,11 @@ query c($code: String!) {
       : h('.card.site', {id: this.props.code}, [
         h('.card-header', [
           h('p.card-header-title', [
-            this.state.editing
-            ? h('span', {
-              contentEditable: true,
-              onInput: e => {
-                this.setState({editingName: e.target.textContent.trim()})
-              },
-              ref: el => { el && el.focus() },
-              dangerouslySetInnerHTML: {
-                __html: this.state.site.name
-              }
-            })
-            : h('a', {href: `/sites/${this.state.site.code}`}, this.state.site.name)
+            h('a', {href: `/sites/${this.state.site.code}`}, this.state.site.name)
           ]),
           this.state.site.shareURL
           ? (
-            h('p.card-header-icon', {title: 'this site is shared'}, [
+            h('p.card-header-icon', {title: 'this site is publicly shared'}, [
               h('a.icon', [
                 h('i.fa.fa-share-alt')
               ])
@@ -100,73 +86,9 @@ query c($code: String!) {
               colours: this.state.me.colours
             })
           ])
-        ]),
-        h('.card-footer', this.state.deleting
-          ? [
-            h('a.card-footer-item.danger', {onClick: this.confirmDelete}, 'really delete?'),
-            h('a.card-footer-item', {onClick: this.cancelDelete}, 'cancel')
-          ]
-          : this.state.editing
-            ? [
-              h('a.card-footer-item.save', {onClick: this.confirmEdit}, 'save'),
-              h('a.card-footer-item', {onClick: this.cancelEdit}, 'cancel')
-            ]
-            : [
-              h('a', {className: 'card-footer-item', href: `/sites/${this.props.code}`}, 'view'),
-              h('a.card-footer-item', {onClick: () => { this.setState({editing: true}) }}, 'rename'),
-              h('a.card-footer-item', {onClick: () => { this.setState({deleting: true}) }}, 'delete')
-            ]
-        )
+        ])
       ])
     ))
-  },
-
-  confirmEdit () {
-    if (!this.state.editingName) {
-      this.setState({editing: false})
-      return
-    }
-
-    graphql.mutate(`
-      ($name: String!, $code: String!) {
-        renameSite(name: $name, code: $code) {
-          ...${this.sitef}
-        }
-      }
-    `, {name: this.state.editingName, code: this.state.site.code})
-    .then(r => {
-      this.setState({editing: false, site: r.renameSite})
-    })
-    .catch(log.error)
-  },
-
-  cancelEdit () {
-    this.setState({editing: false})
-  },
-
-  confirmDelete () {
-    this.setState({deleting: false})
-    graphql.mutate(`
-($code: String!) {
-  deleteSite(code: $code) {
-    ok, error
-  }
-}
-    `, {code: this.state.site.code})
-    .then(r => {
-      if (!r.deleteSite.ok) {
-        log.error('failed to delete site:', r.deleteSite.error)
-        this.setState({deleting: false})
-        return
-      }
-      log.info(`${this.props.site.name} was deleted.`)
-      this.props.iWasDeleted()
-    })
-    .catch(log.error)
-  },
-
-  cancelDelete () {
-    this.setState({deleting: false})
   }
 })
 

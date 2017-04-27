@@ -1,5 +1,6 @@
 const React = require('react')
 const h = require('react-hyperscript')
+const page = require('page')
 const findDOMNode = require('react-dom').findDOMNode
 const TangleText = require('react-tangle')
 const throttle = require('throttleit')
@@ -105,6 +106,8 @@ query d($code: String!, $last: Int, $l: Int, $s: Int, $r: String) {
       return h('div')
     }
 
+    let colours = mergeColours(this.state.me.colours)
+
     return (
       h('.container', [
         h('.content', [
@@ -112,10 +115,19 @@ query d($code: String!, $last: Int, $l: Int, $s: Int, $r: String) {
           h('h6.subtitle.is-6', this.state.site.code)
         ]),
         this.state.dataMax === 0 && this.state.site.today.v === 0
-        ? h(NoData, this.state)
+        ? (
+          h(NoData, {
+            ...this.state,
+            colours,
+            isOwner: true,
+            toggleSharing: this.toggleSharing,
+            confirmDelete: this.confirmDelete
+          })
+        )
         : (
           h(Data, {
             ...this.state,
+            colours,
             isOwner: true,
             updateNLastDays: this.query,
             updateMinScore: v => { this.setState({sessionsMinScore: v}, this.query) },
@@ -124,7 +136,8 @@ query d($code: String!, $last: Int, $l: Int, $s: Int, $r: String) {
             },
             filterByReferrer: this.filterByReferrer,
             dontFilterByReferrer: this.dontFilterByReferrer,
-            toggleSharing: this.toggleSharing
+            toggleSharing: this.toggleSharing,
+            confirmDelete: this.confirmDelete
           })
         )
       ])
@@ -148,6 +161,41 @@ query d($code: String!, $last: Int, $l: Int, $s: Int, $r: String) {
       }
       log.info(`${this.props.site.name} is now ${!this.state.site.shareURL ? 'un' : ''}shared.`)
       this.query()
+    })
+    .catch(log.error)
+  },
+
+  confirmRename () {
+    graphql.mutate(`
+      ($name: String!, $code: String!) {
+        renameSite(name: $name, code: $code) {
+          ...${this.sitef}
+        }
+      }
+    `, {name: this.state.editingName, code: this.state.site.code})
+    .then(r => {
+      this.setState({editing: false, site: r.renameSite})
+      log.info('site renamed.')
+    })
+    .catch(log.error)
+  },
+
+  confirmDelete () {
+    graphql.mutate(`
+($code: String!) {
+  deleteSite(code: $code) {
+    ok, error
+  }
+}
+    `, {code: this.state.site.code})
+    .then(r => {
+      if (!r.deleteSite.ok) {
+        log.error('failed to delete site:', r.deleteSite.error)
+        this.setState({deleting: false})
+        return
+      }
+      log.info(`${this.state.site.name} was deleted.`)
+      page('/sites')
     })
     .catch(log.error)
   },
@@ -180,8 +228,7 @@ const Data = React.createClass({
       pagesOpen: false,
       referrersOpen: false,
       referrersTrie: null,
-      showSnippet: false,
-      showAbout: false
+      showSnippet: false
     }
   },
 
@@ -233,11 +280,9 @@ const Data = React.createClass({
 
     let totalSessions = this.props.site.referrers.map(({c: count}) => count).reduce((a, b) => a + b, 0)
 
-    let backgroundColor = mergeColours(this.props.me.colours).background
-
     return (
       h(DocumentTitle, {title: title(this.props.site.name)}, [
-        h(BodyStyle, {style: {backgroundColor}}, [
+        h(BodyStyle, {style: {backgroundColor: this.props.colours.background}}, [
           h('.container', [
             h('.columns', [
               h('.column.is-third', [
@@ -410,62 +455,7 @@ const Data = React.createClass({
             ]),
             h('.columns', [
               h('.column.is-half', [
-                h('.card.detail-about', [
-                  h('.card-header', [
-                    h('p.card-header-title', 'Site information'),
-                    h('a.card-header-icon', {
-                      onClick: () => { this.setState({showAbout: !this.state.showAbout}) }
-                    }, [
-                      h('span.icon', [
-                        h(`i.fa.fa-angle-${this.state.showAbout ? 'down' : 'up'}`)
-                      ])
-                    ])
-                  ]),
-                  this.state.showAbout
-                  ? (
-                    h('.card-content', [
-                      h('aside.menu', [
-                        h('p.menu-label', 'Name'),
-                        h('ul.menu-list', [
-                          h('li', this.props.site.name)
-                        ]),
-                        h('p.menu-label', 'Code'),
-                        h('ul.menu-list', [
-                          h('li', this.props.site.code)
-                        ]),
-                        h('p.menu-label', 'Sharing'),
-                        h('ul.menu-list', [
-                          h('li', this.props.site.shareURL
-                            ? 'This site is public, you can share it the following URL:'
-                            : 'This site is private'
-                          ),
-                          this.props.site.shareURL && h('li', [
-                            h('input.input', {
-                              disabled: true,
-                              value: this.props.site.shareURL,
-                              style: {marginTop: '4px'}
-                            })
-                          ]),
-                          this.props.isOwner &&
-                          h('li', [
-                            h('a.button.is-warning.is-small.is-inverted.is-outlined', {
-                              style: {display: 'inline-block'},
-                              onClick: this.props.toggleSharing
-                            }, this.props.site.shareURL
-                              ? 'Make it private'
-                              : 'Make it public and share'
-                            )
-                          ])
-                        ]),
-                        h('p.menu-label', 'Creation date'),
-                        h('ul.menu-list', [
-                          h('li', formatdate(this.props.site.created_at))
-                        ])
-                      ])
-                    ])
-                  )
-                  : ''
-                ])
+                h(About, this.props)
               ]),
               this.props.isOwner && h('.column.is-half', [
                 h('.card.detail-trackingcode', [
@@ -479,23 +469,120 @@ const Data = React.createClass({
                       ])
                     ])
                   ]),
-                  this.state.showSnippet
-                  ? (
-                    h('.card-content', [
-                      h('.content', [
-                        h('p', 'Paste the following in any part of your site:'),
-                        h('pre', [
-                          h('code', `<script>;${snippet(this.props.site.code, this.props.me.domains[0])};</script>`)
-                        ])
+                  this.state.showSnippet && h('.card-content', [
+                    h('.content', [
+                      h('p', 'Paste the following in any part of your site:'),
+                      h('pre', [
+                        h('code',
+                          `<script>;${snippet(this.props.site.code, this.props.me.domains[0])};</script>`)
                       ])
                     ])
-                  )
-                  : ''
+                  ])
                 ])
               ])
             ])
           ])
         ])
+      ])
+    )
+  }
+})
+
+const About = React.createClass({
+  getInitialState () {
+    return {
+      showAbout: false,
+      isRenaming: false,
+      isDeleting: false
+    }
+  },
+
+  render () {
+    return (
+      h('.card.detail-about', [
+        h('.card-header', [
+          h('p.card-header-title', 'Site information'),
+          h('a.card-header-icon', {
+            onClick: () => { this.setState({showAbout: !this.state.showAbout}) }
+          }, [
+            h('span.icon', [
+              h(`i.fa.fa-angle-${this.state.showAbout ? 'down' : 'up'}`)
+            ])
+          ])
+        ]),
+        this.state.showAbout &&
+          h('.card-content', [
+            h('aside.menu', [
+              h('p.menu-label', 'Name'),
+              h('ul.menu-list', [
+                h('li', this.props.site.name)
+              ]),
+              h('p.menu-label', 'Code'),
+              h('ul.menu-list', [
+                h('li', this.props.site.code)
+              ]),
+              h('p.menu-label', 'Sharing'),
+              h('ul.menu-list', [
+                h('li', this.props.site.shareURL
+                  ? 'This site is public, you can share it the following URL:'
+                  : 'This site is private'
+                ),
+                this.props.site.shareURL && h('li', [
+                  h('input.input', {
+                    disabled: true,
+                    value: this.props.site.shareURL,
+                    style: {marginTop: '4px'}
+                  })
+                ]),
+                this.props.isOwner &&
+                h('li', [
+                  h('a.button.is-warning.is-small.is-inverted.is-outlined', {
+                    style: {display: 'inline-block'},
+                    onClick: this.props.toggleSharing
+                  }, this.props.site.shareURL
+                    ? 'Make it private'
+                    : 'Make it public and share'
+                  )
+                ])
+              ]),
+              h('p.menu-label', 'Creation date'),
+              h('ul.menu-list', [
+                h('li', formatdate(this.props.site.created_at))
+              ].concat(
+                this.state.isDeleting
+                ? [
+                  h('li.delete-site.cancel', [
+                    h('a.button.is-large', {
+                      onClick: e => {
+                        e.preventDefault()
+                        this.setState({isDeleting: false})
+                      }
+                    }, 'do not delete')
+                  ]),
+                  h('li.delete-site.confirm', [
+                    h('a.button.is-danger.is-small', {
+                      onClick: e => {
+                        e.preventDefault()
+                        this.props.confirmDelete()
+                        this.setState({isDeleting: false})
+                      }
+                    }, 'delete irrecoverably')
+                  ])
+                ]
+                : (
+                  h('li.delete-site.start', [
+                    h('a.button.is-danger.is-small', {
+                      style: {display: 'inline-block'},
+                      onClick: e => {
+                        e.preventDefault()
+                        this.setState({isDeleting: true})
+                      }
+                    }, 'delete site')
+                  ])
+                )
+              ))
+            ])
+          ])
       ])
     )
   }
@@ -518,25 +605,36 @@ const NoData = React.createClass({
 
   render () {
     return (
-      h('.card.detail-trackingcode', [
-        h('.card-content', [
-          h('.content', [
-            h('p', 'This site has no data yet. Have you installed the tracking code?'),
-            h('p', 'Just paste the following in any part of your site:'),
-            h('pre', [
-              h('code', `<script>;${snippet(this.props.site.code, this.state.domain)};</script>`)
-            ]),
-            h('.level', {style: {marginTop: '14px'}}, [
-              h('.level-left', [
-                'Use a different domain: ',
-                h('span.select', {style: {marginLeft: '11px'}}, [
-                  h('select', {
-                    onChange: e => this.setState({domain: e.target.value}),
-                    value: this.state.domain
-                  }, this.props.me.domains.concat(this.defaultDomain).map(hostname =>
-                    h('option', hostname)
-                  ))
-                ])
+      h(DocumentTitle, {title: title(this.props.site.name)}, [
+        h(BodyStyle, {style: {backgroundColor: this.props.colours.background}}, [
+          h('.container', [
+            h('.columns', [
+              h('.column.is-full', [
+                h('.card.detail-trackingcode', [
+                  h('.card-content', [
+                    h('.content', [
+                      h('p', 'This site has no data yet. Have you installed the tracking code?'),
+                      h('p', 'Just paste the following in any part of your site:'),
+                      h('pre', [
+                        h('code', `<script>;${snippet(this.props.site.code, this.state.domain)};</script>`)
+                      ]),
+                      h('.level', {style: {marginTop: '14px'}}, [
+                        h('.level-left', [
+                          'Use a different domain: ',
+                          h('span.select', {style: {marginLeft: '11px'}}, [
+                            h('select', {
+                              onChange: e => this.setState({domain: e.target.value}),
+                              value: this.state.domain
+                            }, this.props.me.domains.concat(this.defaultDomain).map(hostname =>
+                              h('option', hostname)
+                            ))
+                          ])
+                        ])
+                      ])
+                    ])
+                  ])
+                ]),
+                h(About, this.props)
               ])
             ])
           ])
@@ -554,10 +652,10 @@ const TangleChangeLastDays = function (props) {
         value: props.nlastdays,
         onChange: props.updateNLastDays,
         pixelDistance: 15,
-        min: 2,
+        min: 1,
         max: 90
       }),
-      ' days'
+      ' day' + (props.nlastdays === 1 ? '' : 's')
     ])
   )
 }

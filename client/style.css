@@ -33,7 +33,7 @@ nav.nav {
   text-align: right !important;
 }
 
-.card.empty { border: 24px #bbb dotted; height: 285px }
+.card.empty { border: 24px #bbb dotted; height: 242px }
 
 .card.site { margin: 0 5px; }
 .card.site .card-header-title {
@@ -53,7 +53,8 @@ nav.nav {
 .card.site:active .recharts-responsive-container { display: none; }
 .card.site:active .fa.placeholder {
   display: block;
-  margin: 50px;
+  margin-top: 50px;
+  height: 150px;
   font-size: 100px;
   color: #bbb;
 }
