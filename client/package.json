@@ -23,6 +23,7 @@
     "react-hyperscript": "^3.0.0",
     "react-tangle": "github:fiatjaf/react-tangle",
     "recharts": "^0.20.8",
+    "riek": "^1.0.7",
     "throttleit": "^1.0.0",
     "tiny-emitter": "^1.1.0",
     "url": "^0.11.0",

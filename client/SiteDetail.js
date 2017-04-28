@@ -3,6 +3,7 @@ const h = require('react-hyperscript')
 const page = require('page')
 const findDOMNode = require('react-dom').findDOMNode
 const TangleText = require('react-tangle')
+const RIEInput = require('riek').RIEInput
 const throttle = require('throttleit')
 const DocumentTitle = require('react-document-title')
 const BodyStyle = require('body-style')
@@ -121,7 +122,8 @@ query d($code: String!, $last: Int, $l: Int, $s: Int, $r: String) {
             colours,
             isOwner: true,
             toggleSharing: this.toggleSharing,
-            confirmDelete: this.confirmDelete
+            confirmDelete: this.confirmDelete,
+            confirmRename: this.confirmRename
           })
         )
         : (
@@ -137,7 +139,8 @@ query d($code: String!, $last: Int, $l: Int, $s: Int, $r: String) {
             filterByReferrer: this.filterByReferrer,
             dontFilterByReferrer: this.dontFilterByReferrer,
             toggleSharing: this.toggleSharing,
-            confirmDelete: this.confirmDelete
+            confirmDelete: this.confirmDelete,
+            confirmRename: this.confirmRename
           })
         )
       ])
@@ -165,17 +168,20 @@ query d($code: String!, $last: Int, $l: Int, $s: Int, $r: String) {
     .catch(log.error)
   },
 
-  confirmRename () {
+  confirmRename ({name}) {
     graphql.mutate(`
       ($name: String!, $code: String!) {
         renameSite(name: $name, code: $code) {
-          ...${this.sitef}
+          name
         }
       }
-    `, {name: this.state.editingName, code: this.state.site.code})
+    `, {name, code: this.state.site.code})
     .then(r => {
-      this.setState({editing: false, site: r.renameSite})
-      log.info('site renamed.')
+      log.info(`${this.state.site.name} renamed to ${r.renameSite.name}.`)
+      this.setState(st => {
+        st.site.name = r.renameSite.name
+        return st
+      })
     })
     .catch(log.error)
   },
@@ -515,7 +521,16 @@ const About = React.createClass({
             h('aside.menu', [
               h('p.menu-label', 'Name'),
               h('ul.menu-list', [
-                h('li', this.props.site.name)
+                h('li', [
+                  h(RIEInput, {
+                    value: this.props.site.name,
+                    propName: 'name',
+                    change: this.props.confirmRename,
+                    shouldBlockWhileLoading: true,
+                    classEditing: 'input',
+                    classLoading: 'is-warning'
+                  })
+                ])
               ]),
               h('p.menu-label', 'Code'),
               h('ul.menu-list', [
