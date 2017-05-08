@@ -20,7 +20,8 @@ const title = require('./helpers').title
 const onLoggedStateChange = require('./auth').onLoggedStateChange
 
 const charts = {
-  Main: require('./charts/Main'),
+  MainDays: require('./charts/MainDays'),
+  MainMonths: require('./charts/MainMonths'),
   SessionsByReferrer: require('./charts/SessionsByReferrer')
 }
 
@@ -30,6 +31,7 @@ const SiteDetail = React.createClass({
       site: null,
       dataMax: 100,
       nlastdays: 45,
+      usingMonths: false,
       sessionsLimit: 400,
       sessionsMinScore: 1,
       sessionsReferrerSelected: '',
@@ -39,30 +41,28 @@ const SiteDetail = React.createClass({
 
   query (last) {
     last = last || this.state.nlastdays
+    let usingMonths = last > 90
+
+    let daysfields = `
+    days { day, s, v }
+    sessionsbyreferrer(limit: $l, minscore: $s, referrer: $r) {
+      referrer, scores
+    }
+    `
+
+    let monthsfields = 'months { month, v, s, b, c }'
 
     graphql.query(`
-query d($code: String!, $last: Int, $l: Int, $s: Int, $r: String) {
+query d($code: String!, $last: Int${usingMonths ? '' : ', $l: Int, $s: Int, $r: String'}) {
   site(code: $code, last: $last) {
     name
     code
     created_at
     shareURL
-    days {
-      day
-      s
-      v
-    }
-    sessionsbyreferrer(limit: $l, minscore: $s, referrer: $r) {
-      referrer
-      scores
-    }
+    ${usingMonths ? monthsfields : daysfields}
     pages { a, c }
     referrers { a, c }
-    today {
-      s
-      v
-      b
-    }
+    today { s, v, b }
   }
   me {
     colours { ...${coloursfragment} }
@@ -81,7 +81,11 @@ query d($code: String!, $last: Int, $l: Int, $s: Int, $r: String) {
         site: r.site,
         me: r.me,
         nlastdays: last,
-        dataMax: Math.max(...r.site.days.map(d => d.v))
+        usingMonths,
+        dataMax: Math.max(
+          ...(r.site.days || []).map(d => d.v),
+          ...(r.site.months || []).map(d => d.v)
+        )
       })
     })
     .catch(log.error)
@@ -280,11 +284,16 @@ const Data = React.createClass({
     }
     // ~
 
-    let individualSessions = charts.SessionsByReferrer.sessionGroupsToIndividual(
+    var individualSessions
+    if (!this.props.usingMonths) {
+      individualSessions = charts.SessionsByReferrer.sessionGroupsToIndividual(
         this.props.site.sessionsbyreferrer
-    )
+      )
+    }
 
-    let totalSessions = this.props.site.referrers.map(({c: count}) => count).reduce((a, b) => a + b, 0)
+    let totalSessions = this.props.site.referrers
+      .map(({c: count}) => count)
+      .reduce((a, b) => a + b, 0)
 
     return (
       h(DocumentTitle, {title: title(this.props.site.name)}, [
@@ -329,7 +338,13 @@ const Data = React.createClass({
               ]),
               h('.card-image', [
                 h('figure.image', [
-                  h(charts.Main, {
+                  this.props.usingMonths
+                  ? h(charts.MainMonths, {
+                    site: this.props.site,
+                    dataMax: this.props.dataMax,
+                    colours: this.props.me.colours
+                  })
+                  : h(charts.MainDays, {
                     site: this.props.site,
                     dataMax: this.props.dataMax,
                     colours: this.props.me.colours
@@ -337,45 +352,47 @@ const Data = React.createClass({
                 ])
               ])
             ]),
-            h('.card.detail-chart-individualsessions', [
-              h('.card-header', [
-                h('.card-header-title', [
-                  `showing ${individualSessions.length} sessions `,
-                  h(TangleChangeMinScore, this.props),
-                  ` from a total of ${totalSessions} `,
-                  h(TangleChangeLastDays, this.props)
-                ])
-              ]),
-              h('.card-image', [
-                h('figure.image', [
-                  h(charts.SessionsByReferrer, {
-                    site: this.props.site,
-                    individualSessions: individualSessions,
-                    handleClick: this.props.updateSessionsReferrerSelected
-                  })
-                ])
-              ]),
-              h('.card-content', {style: {paddingTop: '3px', paddingBottom: '5px'}}, [
-                h('.content', [
-                  h('p', this.props.sessionsReferrerFilter
-                    ? [
-                      'seeing sessions from ',
-                      h('b', this.props.sessionsReferrerFilter),
-                      'only, ',
-                      h('a', {onClick: this.props.dontFilterByReferrer}, 'view from all?')
-                    ]
-                    : this.props.sessionsReferrerSelected
+            !this.props.usingMonths && (
+              h('.card.detail-chart-individualsessions', [
+                h('.card-header', [
+                  h('.card-header-title', [
+                    `showing ${individualSessions.length} sessions `,
+                    h(TangleChangeMinScore, this.props),
+                    ` from a total of ${totalSessions} `,
+                    h(TangleChangeLastDays, this.props)
+                  ])
+                ]),
+                h('.card-image', [
+                  h('figure.image', [
+                    h(charts.SessionsByReferrer, {
+                      site: this.props.site,
+                      individualSessions: individualSessions,
+                      handleClick: this.props.updateSessionsReferrerSelected
+                    })
+                  ])
+                ]),
+                h('.card-content', {style: {paddingTop: '3px', paddingBottom: '5px'}}, [
+                  h('.content', [
+                    h('p', this.props.sessionsReferrerFilter
                       ? [
-                        'selected ',
-                        h('b', this.props.sessionsReferrerSelected),
-                        ', ',
-                        h('a', {onClick: this.props.filterByReferrer}, 'see sessions from this referrer only?')
+                        'seeing sessions from ',
+                        h('b', this.props.sessionsReferrerFilter),
+                        'only, ',
+                        h('a', {onClick: this.props.dontFilterByReferrer}, 'view from all?')
                       ]
-                      : 'click at a session bar to selected its referrer.'
-                  )
+                      : this.props.sessionsReferrerSelected
+                        ? [
+                          'selected ',
+                          h('b', this.props.sessionsReferrerSelected),
+                          ', ',
+                          h('a', {onClick: this.props.filterByReferrer}, 'see sessions from this referrer only?')
+                        ]
+                        : 'click at a session bar to selected its referrer.'
+                    )
+                  ])
                 ])
               ])
-            ]),
+            ) || null,
             h('.columns', [
               h('.column.is-half', [
                 h('.card.detail-table', [
@@ -667,8 +684,7 @@ const TangleChangeLastDays = function (props) {
         value: props.nlastdays,
         onChange: props.updateNLastDays,
         pixelDistance: 15,
-        min: 1,
-        max: 90
+        min: 1
       }),
       ' day' + (props.nlastdays === 1 ? '' : 's')
     ])

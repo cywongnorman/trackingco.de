@@ -41,6 +41,12 @@ module.exports.formatdate = function formatdate (d) {
     return d.slice(6) + '/' + month + '/' + d.slice(0, 4)
   }
 }
+module.exports.formatmonth = function formatmonth (d) {
+  if (d) {
+    let month = months.abbr[parseInt(d.slice(4, 6)) - 1]
+    return month + '/' + d.slice(0, 4)
+  }
+}
 
 var colourCache = {}
 module.exports.referrerColour = function referrerColour (referrer) {
