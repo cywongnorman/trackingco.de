@@ -13,3 +13,9 @@ CREATE TABLE sites (
   shared boolean DEFAULT false,
   created_at date DEFAULT now()
 );
+
+CREATE TABLE payments (
+  user_email text REFERENCES users(email),
+  bitpay_invoice text,
+  paid boolean
+);

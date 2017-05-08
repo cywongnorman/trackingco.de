@@ -6,6 +6,7 @@ import (
 	"log"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/fjl/go-couchdb"
 	"github.com/galeone/igor"
@@ -87,7 +88,7 @@ var sessionGroupType = graphql.NewObject(
 var dayType = graphql.NewObject(
 	graphql.ObjectConfig{
 		Name:        "Day",
-		Description: "A day, or a month, maybe an year -- a period of time for which there are stats",
+		Description: "Compiled stats for a single day.",
 		Fields: graphql.Fields{
 			"day": &graphql.Field{
 				Type:        graphql.String,
@@ -132,6 +133,39 @@ var dayType = graphql.NewObject(
 					}
 					return float64(totalbounces) / float64(totalsessions), nil
 				},
+			},
+		},
+	},
+)
+
+var monthType = graphql.NewObject(
+	graphql.ObjectConfig{
+		Name:        "Month",
+		Description: "Compiled stats for a single month.",
+		Fields: graphql.Fields{
+			"month": &graphql.Field{
+				Type:        graphql.String,
+				Description: "the date in format YYYYMM.",
+			},
+			"v": &graphql.Field{
+				Type:        graphql.Int,
+				Description: "total number of pageviews.",
+			},
+			"s": &graphql.Field{
+				Type:        graphql.Int,
+				Description: "total number of sessions.",
+			},
+			"b": &graphql.Field{
+				Type:        graphql.Float,
+				Description: "the bounce rate for this period.",
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					// it is saved as an int multiplied by 100.
+					return float64(p.Source.(Month).BounceRate) / 100, nil
+				},
+			},
+			"c": &graphql.Field{
+				Type:        graphql.Int,
+				Description: "total score: the sum of all scores of all sessions.",
 			},
 		},
 	},
@@ -182,18 +216,64 @@ var siteType = graphql.NewObject(
 					return days, nil
 				},
 			},
+			"months": &graphql.Field{
+				Type: graphql.NewList(monthType),
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					site := p.Source.(Site)
+					var months []Month
+
+					if len(site.couchMonths) == 0 {
+						return months, nil
+					}
+
+					// fill in missing days with zeroes
+					today := presentDay()
+					lastmonth := today.AddDate(0, -1, 0)
+					first, err := time.Parse(MONTHFORMAT, site.couchMonths[0].Month)
+					if err != nil {
+						return months, err
+					}
+					current := first
+					couchpos := 0
+					for !current.After(lastmonth) {
+						if site.couchMonths[couchpos].Month == current.Format(MONTHFORMAT) {
+							months = append(months, site.couchMonths[couchpos])
+							couchpos++
+						} else {
+							months = append(months, Month{Month: current.Format(MONTHFORMAT)})
+						}
+						current = current.AddDate(0, 1, 0)
+					}
+
+					return months, nil
+				},
+			},
 			"referrers": &graphql.Field{
 				Type:        graphql.NewList(entryType),
 				Description: "a list of entries of referrers, sorted by the number of occurrences.",
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					site := p.Source.(Site)
 					all := make(map[string]int)
-					for _, day := range p.Source.(Site).couchDays {
-						for ref, scoremap := range day.Sessions {
-							count := (len(scoremap) - 1) / 2
-							if prevcount, exists := all[ref]; exists {
-								all[ref] = prevcount + count
-							} else {
-								all[ref] = count
+
+					if site.usingMonths {
+						for _, month := range site.couchMonths {
+							for ref, count := range month.TopReferrers {
+								if prevcount, exists := all[ref]; exists {
+									all[ref] = prevcount + count
+								} else {
+									all[ref] = count
+								}
+							}
+						}
+					} else {
+						for _, day := range site.couchDays {
+							for ref, scoremap := range day.Sessions {
+								count := (len(scoremap) - 1) / 2
+								if prevcount, exists := all[ref]; exists {
+									all[ref] = prevcount + count
+								} else {
+									all[ref] = count
+								}
 							}
 						}
 					}
@@ -208,13 +288,27 @@ var siteType = graphql.NewObject(
 				Type:        graphql.NewList(entryType),
 				Description: "a list of entries of viewed pages, sorted by the number of occurrences.",
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					site := p.Source.(Site)
 					all := make(map[string]int)
-					for _, day := range p.Source.(Site).couchDays {
-						for addr, count := range day.Pages {
-							if prevcount, exists := all[addr]; exists {
-								all[addr] = prevcount + count
-							} else {
-								all[addr] = count
+
+					if site.usingMonths {
+						for _, month := range site.couchMonths {
+							for ref, count := range month.TopPages {
+								if prevcount, exists := all[ref]; exists {
+									all[ref] = prevcount + count
+								} else {
+									all[ref] = count
+								}
+							}
+						}
+					} else {
+						for _, day := range p.Source.(Site).couchDays {
+							for addr, count := range day.Pages {
+								if prevcount, exists := all[addr]; exists {
+									all[addr] = prevcount + count
+								} else {
+									all[addr] = count
+								}
 							}
 						}
 					}
@@ -301,7 +395,6 @@ var siteType = graphql.NewObject(
 					return day, nil
 				},
 			},
-			"months": &graphql.Field{Type: graphql.NewList(dayType)},
 		},
 	},
 )
@@ -437,21 +530,36 @@ var rootQuery = graphql.ObjectConfig{
 				if site.lastDays <= 0 {
 					// no.
 					return site, nil
+				} else if site.lastDays <= 90 {
+					// yes.
+					res := CouchDBDayResults{}
+					today := presentDay()
+					startday := today.AddDate(0, 0, -site.lastDays)
+					err = couch.AllDocs(&res, couchdb.Options{
+						"startkey":     makeBaseKey(site.Code, startday.Format(DATEFORMAT)),
+						"endkey":       makeBaseKey(site.Code, today.Format(DATEFORMAT)),
+						"include_docs": true,
+					})
+					if err != nil {
+						return nil, err
+					}
+					site.couchDays = res.toDayList()
+				} else {
+					// no, we must fetch months instead.
+					res := CouchDBMonthResults{}
+					today := presentDay()
+					startday := today.AddDate(0, 0, -site.lastDays)
+					err = couch.AllDocs(&res, couchdb.Options{
+						"startkey":     makeMonthKey(site.Code, startday.Format(MONTHFORMAT)),
+						"endkey":       makeMonthKey(site.Code, today.Format(MONTHFORMAT)),
+						"include_docs": true,
+					})
+					if err != nil {
+						return nil, err
+					}
+					site.couchMonths = res.toMonthList()
+					site.usingMonths = true
 				}
-
-				// yes.
-				res := CouchDBDayResults{}
-				today := presentDay()
-				startday := today.AddDate(0, 0, -site.lastDays)
-				err = couch.AllDocs(&res, couchdb.Options{
-					"startkey":     makeBaseKey(site.Code, startday.Format(DATEFORMAT)),
-					"endkey":       makeBaseKey(site.Code, today.Format(DATEFORMAT)),
-					"include_docs": true,
-				})
-				if err != nil {
-					return nil, err
-				}
-				site.couchDays = res.toDayList()
 
 				return site, nil
 			},

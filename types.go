@@ -94,8 +94,10 @@ type Site struct {
 	CreatedAt string `json:"created_at,omitempty"`
 	Shared    bool   `json:"shared,omitempty"`
 
-	lastDays  int
-	couchDays []Day
+	lastDays    int
+	usingMonths bool
+	couchDays   []Day
+	couchMonths []Month
 
 	ShareURL string  `json:"shareURL,omitempty" sql:"-"`
 	Days     []Day   `json:"days,omitempty" sql:"-"`
@@ -118,6 +120,25 @@ func (res CouchDBDayResults) toDayList() []Day {
 	for i, row := range res.Rows {
 		c[i] = row.Doc
 		c[i].Day = strings.Split(row.Id, ":")[1]
+		c[i].Id = ""
+		c[i].Rev = ""
+	}
+	return c
+}
+
+type CouchDBMonthResults struct {
+	Rows []struct {
+		Rev string `json:"rev"`
+		Id  string `json:"id"`
+		Doc Month  `json:"doc"`
+	} `json:"rows"`
+}
+
+func (res CouchDBMonthResults) toMonthList() []Month {
+	var c = make([]Month, len(res.Rows))
+	for i, row := range res.Rows {
+		c[i] = row.Doc
+		c[i].Month = strings.Split(row.Id, ".")[1]
 		c[i].Id = ""
 		c[i].Rev = ""
 	}

@@ -30,6 +30,7 @@ func runServer() {
 		email := extractEmailFromJWT(c.RequestCtx)
 		if email == "" {
 			email = s.LoggedAs
+			log.Print("forced auth as ", email)
 		}
 		context := context.WithValue(
 			context.TODO(),
