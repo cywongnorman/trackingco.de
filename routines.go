@@ -116,13 +116,13 @@ func compileMonthStats(month string) {
 		sessionswithscore1 := 0
 		for _, day := range days {
 			for page, count := range day.Pages {
-				allpages[page]++
+				allpages[page] += count
 				stats.Pageviews += count
 			}
 			for referrer, scoremap := range day.Sessions {
-				allreferrers[referrer]++
 				sessions := sessionsFromScoremap(scoremap)
 				stats.Sessions += len(sessions)
+				allreferrers[referrer] += len(sessions)
 				for _, score := range sessions {
 					stats.Score += score
 					if score == 1 {
