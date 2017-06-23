@@ -14,8 +14,10 @@ CREATE TABLE sites (
   created_at date DEFAULT now()
 );
 
-CREATE TABLE payments (
+CREATE TABLE balances (
+  id serial PRIMARY KEY,
   user_email text REFERENCES users(email),
-  bitpay_invoice text,
-  paid boolean
+  time date DEFAULT now(),
+  delta integer, -- if positive, the user has paid something, if negative the user owes something
+  due interval -- if this is an invoice, is it valid for a month? an year?
 );

@@ -78,7 +78,7 @@ type User struct {
 	Email   string    `json:"email" igor:"primary_key"`
 	Domains string    `json:"domains"` // actually an array of domains comma-separated.
 	Colours igor.JSON `json:"colours"`
-	Plan    float64   `json:"plan"` // 0: free | 1: $5 | 2: $10 | 3: $50
+	Plan    float64   `json:"plan"`
 
 	SitesOrder []string `json:"-" sql:"-"`
 

@@ -4,4 +4,5 @@
   sudo dpkg-reconfigure tzdata
 * cronjobs must be set:
  01   01    *   *   *    /home/fiatjaf/comp/go/bin/godotenv -f /home/fiatjaf/comp/go/src/github.com/fiatjaf/trackingco.de/.env /home/fiatjaf/comp/go/bin/trackingco.de daily >> /home/fiatjaf/comp/go/src/github.com/fiatjaf/trackingco.de/daily.log 2>&1
+ 02   02   */8  *   *    /home/fiatjaf/comp/go/bin/godotenv -f /home/fiatjaf/comp/go/src/github.com/fiatjaf/trackingco.de/.env /home/fiatjaf/comp/go/bin/trackingco.de every8days >> /home/fiatjaf/comp/go/src/github.com/fiatjaf/trackingco.de/every8days.log 2>&1
  14    5    1   *   *    /home/fiatjaf/comp/go/bin/godotenv -f /home/fiatjaf/comp/go/src/github.com/fiatjaf/trackingco.de/.env /home/fiatjaf/comp/go/bin/trackingco.de monthly >> /home/fiatjaf/comp/go/src/github.com/fiatjaf/trackingco.de/monthly.log 2>&1

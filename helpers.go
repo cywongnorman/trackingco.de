@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"math/rand"
 	"net/url"
 	"strconv"
@@ -17,6 +18,13 @@ const (
 	DATEFORMAT  = "20060102"
 	MONTHFORMAT = "200601"
 )
+
+var planValues = map[float64]int{
+	0: 0,
+	1: 4,
+	2: 8,
+	3: 46,
+}
 
 func presentDay() time.Time {
 	now := time.Now().UTC()
@@ -75,6 +83,11 @@ func dayFromRedis(code, day string) Day {
 	}
 
 	return compendium
+}
+
+func deleteDayFromRedis(code, day string) error {
+	key := redisKeyFactory(code, day)
+	return rds.Del(key("s"), key("p")).Err()
 }
 
 func urlHost(full string) string {
@@ -169,4 +182,13 @@ func sessionsFromScoremap(scoremap string) []int {
 		}
 	}
 	return sessions
+}
+
+func sendMessage(to, subject, body string) error {
+	message := mg.NewMessage("help@m.trackingco.de", subject, body, to)
+	r, _, err := mg.Send(message)
+	if err != nil {
+		return errors.New("error sending email: " + err.Error() + ", " + r)
+	}
+	return nil
 }

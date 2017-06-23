@@ -12,6 +12,7 @@ import (
 	"github.com/galeone/igor"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/speps/go-hashids"
+	mailgun "gopkg.in/mailgun/mailgun-go.v1"
 	"gopkg.in/redis.v5"
 )
 
@@ -28,11 +29,14 @@ type Settings struct {
 	Auth0Secret             string `envconfig:"AUTH0_SECRET"`
 	HerokuToken             string `envconfig:"HEROKU_TOKEN"`
 	HerokuAppName           string `envconfig:"HEROKU_APPNAME"`
+	MailgunDomain           string `envconfig:"MAILGUN_DOMAIN"`
+	MailgunApiKey           string `envconfig:"MAILGUN_API_KEY"`
 }
 
 var err error
 var s Settings
 var pg *igor.Database
+var mg mailgun.Mailgun
 var hso *hashids.HashID
 var rds *redis.Client
 var couch *couchdb.DB
@@ -44,6 +48,9 @@ func main() {
 	if err != nil {
 		log.Fatal("couldn't process envconfig: ", err)
 	}
+
+	// mailgun
+	mg = mailgun.NewMailgun(s.MailgunDomain, s.MailgunApiKey, "")
 
 	// redis
 	rds = redis.NewClient(&redis.Options{
@@ -100,6 +107,8 @@ func main() {
 		switch os.Args[1] {
 		case "daily":
 			daily()
+		case "every8days":
+			every8days()
 		case "monthly":
 			monthly()
 		default:
