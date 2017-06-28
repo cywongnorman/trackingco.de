@@ -3,6 +3,8 @@ const h = require('react-hyperscript')
 const withClickOutside = require('react-click-outside')
 const TwitterPicker = require('react-color').TwitterPicker
 const randomColor = require('randomcolor')
+const n = require('num-ber')
+const fecha = require('fecha')
 const DocumentTitle = require('react-document-title')
 const BodyStyle = require('body-style')
 
@@ -12,12 +14,23 @@ const mergeColours = require('./helpers').mergeColours
 const coloursfragment = require('./helpers').coloursfragment
 const title = require('./helpers').title
 const onLoggedStateChange = require('./auth').onLoggedStateChange
+const getToken = require('./auth').getToken
+
+const plans = [
+  {name: 'Free', code: 0},
+  {name: 'First', code: 1},
+  {name: 'Second', code: 2},
+  {name: 'Third', code: 3}
+]
+
+const prettydate = iso => fecha.format(new Date(iso), 'mediumDate')
 
 const UserAccount = React.createClass({
   getInitialState () {
     return {
       me: null,
-      newDomain: ''
+      newDomain: '',
+      willPay: 12
     }
   },
 
@@ -29,6 +42,7 @@ query {
     domains
     email
     plan
+    billingHistory { id, time, delta, due }
   }
 }
     `)
@@ -54,7 +68,7 @@ query {
     return (
       h(DocumentTitle, {title: title('User account')}, [
         h(BodyStyle, {style: {backgroundColor}}, [
-          h('.tile.is-ancestor', [
+          h('.tile.is-ancestor.is-vertical', [
             h('.tile.is-12', [
               h('.tile', [
                 h('.tile.is-parent', [
@@ -119,31 +133,157 @@ query {
                         h('.card-header-title', 'Account information')
                       ]),
                       h('.card-content', [
-                        h('p', this.state.me.email),
-                        h('p', this.state.me.plan)
+                        h('p', `email: ${this.state.me.email}`),
+                        h('p', `plan: ${plans[this.state.me.plan].name}`)
                       ])
                     ])
                   ])
                 ])
               ])
             ]),
-            h('.tile.is-7', [
-              h('.tile.is-child', [
-                h('.card.account-plan', [
-                  h('.card-header', [
-                    h('.card-header-title', 'Plan')
-                  ]),
-                  h('.card-content', [
-                    this.state.me.plan
+            h('.tile.is-12', [
+              h('.tile.is-4', [
+                h('.tile.is-parent', [
+                  h('.tile.is-child', [
+                    h('.card.account-plan', [
+                      h('.card-header', [
+                        h('.card-header-title', 'Your plan')
+                      ]),
+                      h('.card-content', [
+                        h('h2.title.is-2', `${plans[this.state.me.plan].name} Plan`),
+                        this.state.me.plan >= (plans.length - 1)
+                        ? h('p', 'Contact us if you want a bigger plan.')
+                        : h('div', [
+                          h('h3.title.is-3', 'Upgrade to:'),
+                          h('ul', plans.slice(this.state.me.plan + 1).map(({name, code}) =>
+                            h('li', [
+                              h('button.button.is-large.is-warning', {
+                                onClick: e => this.setPlan(code, e)
+                              }, `${name} Plan`)
+                            ])
+                          ))
+                        ]),
+                        h('hr'),
+                        this.state.me.plan === 0
+                        ? 'You have no guarantees in the Free Plan, all your data can be erased at any time.'
+                        : h('div', [
+                          h('h6.title.is-6', 'Downgrade to:'),
+                          h('ul', plans.slice(0, this.state.me.plan).map(({name, code}) =>
+                            h('li', [
+                              h('button.button.is-small.is-light', {
+                                onClick: e => this.setPlan(code, e)
+                              }, `${name} Plan`)
+                            ])
+                          ))
+                        ])
+                      ])
+                    ])
                   ])
                 ])
-              ])
-            ]),
-            h('.tile.is-5')
+              ]),
+              h('.tile.is-6', [
+                h('.tile.is-parent', [
+                  h('.tile.is-child', [
+                    h('.card.account-billing-history', [
+                      h('.card-header', [
+                        h('.card-header-title', 'Billing History')
+                      ]),
+                      h('.card-content', [
+                        h('h3.title.is-3', [
+                          h('small.small', 'Balance: '),
+                          '$' + n.format(this.state.me.billingHistory
+                            .reduce((acc, entry) => acc + entry.delta, 0)
+                          , 2)
+                        ]),
+                        h('table.table', [
+                          h('thead', [
+                            h('tr', [
+                              h('th', 'date'),
+                              h('th', 'kind'),
+                              h('th', 'value'),
+                              h('th', 'valid until')
+                            ])
+                          ]),
+                          h('tbody', this.state.me.billingHistory.map(entry =>
+                            h('tr', {key: entry.id, id: entry.id}, [
+                              h('td', prettydate(entry.time)),
+                              h('td', entry.due ? 'charge' : 'payment'),
+                              h('td', n.format(entry.delta, 2)),
+                              h('td', entry.due ? prettydate(entry.due) : '')
+                            ])
+                          ))
+                        ]),
+                        h('hr'),
+                        h('.payment', [
+                          h('p.control', [
+                            h('a.button.is-static.is-disabled', '$')
+                          ]),
+                          h('p.control', [
+                            h('input.input', {
+                              onChange: e => this.setState({willPay: e.target.value}),
+                              value: this.state.willPay
+                            })
+                          ]),
+                          h('p.control', [
+                            h('a.button.is-info', {
+                              onClick: this.bitcoinPayRedirect
+                            }, 'Make payment')
+                          ])
+                        ])
+                      ])
+                    ])
+                  ])
+                ])
+              ]),
+              h('.tile.is-2')
+            ])
           ])
         ])
       ])
     )
+  },
+
+  setPlan (code, e) {
+    e.preventDefault()
+
+    if (this.state.me.billingHistory.reduce((acc, e) => acc + e.delta, 0) <= 0) {
+      log.info('Please make a payment to fund your account before upgrading!')
+      return
+    }
+
+    graphql.mutate(`
+($code: Float!) {
+  setPlan(plan: $code) {
+    ok, error
+  }
+}
+    `, {code})
+    .then(r => {
+      if (!r.setPlan.ok) {
+        log.error('failed to setPlan:', r.setPlan.error)
+        return
+      }
+      this.setState(st => {
+        st.me.plan = code
+        return st
+      })
+    })
+    .catch(log.error)
+  },
+
+  bitcoinPayRedirect (e) {
+    window.fetch(`/billing/bitcoinpay/start/${this.state.willPay}/`, {
+      headers: new window.Headers({'Authorization': getToken()})
+    })
+      .then(r => r.text())
+      .then(url => {
+        if (url.slice(0, 4) === 'http') {
+          location.href = url
+          return
+        }
+        throw new Error(url)
+      })
+      .catch(log.error)
   },
 
   changeColour (field, colour) {

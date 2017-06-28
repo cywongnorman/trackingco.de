@@ -82,10 +82,18 @@ type User struct {
 
 	SitesOrder []string `json:"-" sql:"-"`
 
-	Sites []Site `json:"sites" sql:"-"`
+	Sites          []Site         `json:"sites" sql:"-"`
+	BillingHistory []BillingEntry `json:"billingHistory" sql:"-"`
 }
 
 func (_ User) TableName() string { return "users" }
+
+type BillingEntry struct {
+	Id    int     `json:"id" igor:"primary_key"`
+	Time  string  `json:"time"`
+	Delta float64 `json:"delta"`
+	Due   string  `json:"due"`
+}
 
 type Site struct {
 	Code      string `json:"code,omitempty" igor:"primary_key"`

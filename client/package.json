@@ -4,6 +4,7 @@
     "auth0-js": "^8.3.0",
     "body-style": "^0.3.0",
     "color": "^1.0.3",
+    "fecha": "^2.3.1",
     "just-reduce-object": "^1.0.3",
     "leven": "^2.1.0",
     "localsync": "^1.4.0",

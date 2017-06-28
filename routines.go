@@ -30,8 +30,11 @@ func daily() {
 }
 
 func every8days() {
+	log.Print("# running every8day routine, today is ",
+		presentDay().Format(DATEFORMAT))
+
 	downgradeAccountsInDebtForMoreThanAWeek()
-	generateInvoices()
+	generateCharges()
 	notifyAccountsInDebt()
 }
 
@@ -206,14 +209,15 @@ func deleteOlderDayStats() {
 	}
 }
 
-func generateInvoices() {
+func generateCharges() {
+	log.Print("-- generating new charges for all accounts with expired charge-times.")
 	var res []struct {
 		UserEmail string    `json:"user_email"`
 		ExpiresAt time.Time `json:"expires_at"`
 		Plan      float64   `json:"plan"`
 	}
 
-	// find all expired invoices
+	// find all expired charges
 	err := pg.Raw(`
 SELECT DISTINCT ON (user_email)
   user_email,
@@ -222,19 +226,24 @@ SELECT DISTINCT ON (user_email)
 FROM balances
   INNER JOIN users ON user_email = users.email
 WHERE
-  due IS NOT NULL AND (time + due) <= now()
+  due IS NOT NULL AND
+  plan > 0
 ORDER BY user_email, time DESC`).
 		Scan(&res)
 
 	if err != nil {
-		log.Print("failed to fetch account data for generating invoices: ", err)
+		log.Print("   : failed to fetch account data for generating charges: ", err)
 		return
 	}
 
 	// create new ones starting at the day those expired
 	for _, row := range res {
-		planValue := planValues[row.Plan]
+		if row.ExpiresAt.After(presentDay()) {
+			// last invoice not expired yet
+			continue
+		}
 
+		planValue := planValues[row.Plan]
 		err := pg.Exec(`
 INSERT INTO balances (user_email, time, delta, due)
 VALUES (?, ?, ?, '1 month')
@@ -243,12 +252,15 @@ VALUES (?, ?, ?, '1 month')
 			row.ExpiresAt,
 			-planValue)
 		if err != nil {
-			log.Print("failed to create invoice at account ", row, ": ", err)
+			log.Print("   : failed to create charge at account ", row, ": ", err)
+		} else {
+			log.Print("   : created charge at account ", row, " with value ", -planValue)
 		}
 	}
 }
 
 func notifyAccountsInDebt() {
+	log.Print("-- notifying accounts in debt.")
 	var res []struct {
 		UserEmail string  `json:"user_email"`
 		Balance   float64 `json:"balance"`
@@ -269,7 +281,7 @@ SELECT user_email, balance FROM (
 	}
 
 	for _, row := range res {
-		log.Print("notifying ", row.UserEmail, " for a debt balance of ", row.Balance)
+		log.Print("   : notifying ", row.UserEmail, " for a debt balance of ", row.Balance)
 		if err = sendMessage(
 			row.UserEmail,
 			"Payment reminder at tracking.code",
@@ -298,6 +310,8 @@ trackingco.de
 }
 
 func downgradeAccountsInDebtForMoreThanAWeek() {
+	log.Print("-- downgrading accounts in debt for more than 8 days.")
+
 	var res []struct {
 		UserEmail string `json:"user_email"`
 	}
@@ -314,26 +328,27 @@ SELECT email FROM (
     ) AS expires_at
   FROM users
 )d
-WHERE plan > 0 AND (expires_at + '8 days') < now()
+WHERE balance < 0 AND plan > 0 AND (expires_at + '8 days') < now()
     `).Scan(&res)
 
 	if err != nil {
-		log.Print("failed to fetch accounts with debt for more than 8 days.") // tell the user 7 days.
+		log.Print("   : failed to fetch accounts with debt for more than 8 days.") // tell the user 7 days.
 		return
 	}
 
 	for _, row := range res {
-		log.Print("downgrading account ", row.UserEmail, " to plan 0")
+		log.Print("   : downgrading account ", row.UserEmail, " to plan 0")
 		tx := pg.Begin()
 		tx.Exec("UPDATE users SET plan = 0 WHERE users.email = ?", row.UserEmail)
 		tx.Exec(`
-UPDATE balances SET delta = 0
+UPDATE balances
+SET delta = 0
 WHERE user_email = ?
   AND id = (
     SELECT id FROM balances
     WHERE user_email = ? AND due IS NOT NULL
     ORDER BY time DESC LIMIT 1
-  )i
+  )
         `, row.UserEmail, row.UserEmail)
 		err := tx.Commit()
 		if err != nil {

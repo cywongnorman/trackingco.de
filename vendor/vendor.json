@@ -153,6 +153,12 @@
 			"revisionTime": "2016-01-29T22:01:14Z"
 		},
 		{
+			"checksumSHA1": "ynJSWoF6v+3zMnh9R0QmmG6iGV8=",
+			"path": "github.com/pkg/errors",
+			"revision": "248dadf4e9068a0b3e79f02ed0a610d935de5302",
+			"revisionTime": "2016-10-29T09:36:37Z"
+		},
+		{
 			"checksumSHA1": "+mB8aEvEg2wl3PoWZjAVfhGxtJA=",
 			"path": "github.com/qiangxue/fasthttp-routing",
 			"revision": "6ccdc2a18d8712f842de50ddcb8c9a3d025ddc71",
@@ -205,6 +211,18 @@
 			"path": "golang.org/x/net/html/atom",
 			"revision": "6acef71eb69611914f7a30939ea9f6e194c78172",
 			"revisionTime": "2016-02-25T17:50:37Z"
+		},
+		{
+			"checksumSHA1": "lHwwBj/J1a2XxzoMYdYgGPtjwbA=",
+			"path": "gopkg.in/jmcvetta/napping.v3",
+			"revision": "5be8267a453ffa5b80c4af7fa4cfc1d04d3cfd5c",
+			"revisionTime": "2016-04-03T19:31:46Z"
+		},
+		{
+			"checksumSHA1": "oFION+ZSb6Vb+uITOOLUzVfawE0=",
+			"path": "gopkg.in/mailgun/mailgun-go.v1",
+			"revision": "a4002e2df2e8ca2da6a6fbb4a72871b504e49f50",
+			"revisionTime": "2017-02-13T15:09:30Z"
 		},
 		{
 			"checksumSHA1": "UIjYxb3qWMEPBbX7kV7fEnkMNSE=",

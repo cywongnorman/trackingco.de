@@ -80,6 +80,7 @@ nav.nav {
 .card.account-info,
 .card.account-colours,
 .card.account-plan,
+.card.account-billing-history,
 .card.detail-chart-main,
 .card.detail-chart-individualsessions,
 .card.detail-table,
@@ -88,6 +89,16 @@ nav.nav {
 .card.detail-about {
   margin: 12px 12px 12px 0;
 }
+
+.card.account-plan li {
+  display: inline-block;
+  margin: 6px;
+}
+.card.account-billing-history .payment > * {
+  display: inline-block;
+  margin: 2px;
+}
+
 .card.detail-chart-main .recharts-wrapper { margin-left: 21px; }
 .card.detail-table td:first-child {
   max-width: 120px;

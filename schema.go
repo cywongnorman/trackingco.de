@@ -481,6 +481,38 @@ ORDER BY o`, p.Source.(User).Email).Scan(&sites)
 				},
 			},
 			"colours": &graphql.Field{Type: coloursType},
+			"billingHistory": &graphql.Field{
+				Type: graphql.NewList(billingEntryType),
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					var entries []BillingEntry
+					err = pg.Raw(`
+SELECT
+  id,
+  to_char(time, 'YYYY-MM-dd'),
+  delta,
+  CASE WHEN due IS NULL THEN '' ELSE to_char(time + due, 'YYYY-MM-dd') END AS due
+FROM balances
+WHERE user_email = ?
+ORDER BY time DESC, delta
+                    `, p.Source.(User).Email).Scan(&entries)
+					if err != nil {
+						return nil, err
+					}
+					return entries, nil
+				},
+			},
+		},
+	},
+)
+
+var billingEntryType = graphql.NewObject(
+	graphql.ObjectConfig{
+		Name: "BillingEntry",
+		Fields: graphql.Fields{
+			"id":    &graphql.Field{Type: graphql.Float},
+			"time":  &graphql.Field{Type: graphql.String},
+			"delta": &graphql.Field{Type: graphql.Float},
+			"due":   &graphql.Field{Type: graphql.String},
 		},
 	},
 )
@@ -823,6 +855,42 @@ var rootMutation = graphql.ObjectConfig{
 					`UPDATE users SET colours = ? WHERE email = ?`,
 					colours, email)
 				if err != nil {
+					return Result{false, err.Error()}, err
+				}
+
+				return Result{true, ""}, nil
+			},
+		},
+		"setPlan": &graphql.Field{
+			Type: resultType,
+			Args: graphql.FieldConfigArgument{
+				"plan": &graphql.ArgumentConfig{
+					Type:        graphql.Float,
+					Description: "a plan number.",
+				},
+			},
+			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				email := emailFromContext(p.Context)
+				plan := p.Args["plan"].(float64)
+
+				tx := pg.Begin()
+
+				var funds float64
+				tx.Raw(`
+                    SELECT sum(delta) FROM balances WHERE user_email = ?`,
+					email).Scan(&funds)
+
+				if funds < float64(planValues[plan]) {
+					tx.Rollback()
+					err := errors.New("Please fund your account before upgrading.")
+					return Result{false, err.Error()}, err
+				}
+
+				tx.Exec(
+					`UPDATE users SET plan = ? WHERE email = ?`,
+					plan, email)
+
+				if err = tx.Commit(); err != nil {
 					return Result{false, err.Error()}, err
 				}
 
