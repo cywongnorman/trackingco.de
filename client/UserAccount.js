@@ -3,7 +3,7 @@ const h = require('react-hyperscript')
 const withClickOutside = require('react-click-outside')
 const TwitterPicker = require('react-color').TwitterPicker
 const randomColor = require('randomcolor')
-const n = require('num-ber')
+const n = require('format-number')({prefix: '$'})
 const fecha = require('fecha')
 const DocumentTitle = require('react-document-title')
 const BodyStyle = require('body-style')
@@ -191,9 +191,7 @@ query {
                       h('.card-content', [
                         h('h3.title.is-3', [
                           h('small.small', 'Balance: '),
-                          '$' + n.format(this.state.me.billingHistory
-                            .reduce((acc, entry) => acc + entry.delta, 0)
-                          , 2)
+                          n(this.state.me.billingHistory.reduce((acc, entry) => acc + entry.delta, 0), 2)
                         ]),
                         h('table.table', [
                           h('thead', [

@@ -18,6 +18,7 @@ const auth0 = new Auth0.WebAuth({
 module.exports.auth0 = {
   logout () {
     module.exports.setToken(null)
+    location.href = `https://${domain}/v2/logout?returnTo=${returnTo}`
   },
 
   getLoginURL () {

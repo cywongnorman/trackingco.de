@@ -111,5 +111,6 @@ func extractEmailFromJWT(ctx *fasthttp.RequestCtx) string {
 		return ""
 	}
 
-	return token.Claims["https://trackingco.de/user/email"].(string)
+	email, _ := token.Claims["https://trackingco.de/user/email"].(string)
+	return email
 }
