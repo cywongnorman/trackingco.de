@@ -14,7 +14,6 @@ const mergeColours = require('./helpers').mergeColours
 const coloursfragment = require('./helpers').coloursfragment
 const title = require('./helpers').title
 const onLoggedStateChange = require('./auth').onLoggedStateChange
-const getToken = require('./auth').getToken
 
 const plans = [
   {name: 'Free', code: 0},
@@ -118,7 +117,9 @@ query {
                         h('.card-header-title', 'Interface colours')
                       ]),
                       h('.card-content', [
-                        h(Colours, {
+                        this.state.me.plan < 1
+                        ? h('p', 'Please upgrade your account to gain access to this feature.')
+                        : h(Colours, {
                           ...this.state,
                           onColour: this.changeColour
                         })
@@ -206,7 +207,7 @@ query {
                             h('tr', {key: entry.id, id: entry.id}, [
                               h('td', prettydate(entry.time)),
                               h('td', entry.due ? 'charge' : 'payment'),
-                              h('td', n.format(entry.delta, 2)),
+                              h('td', n(entry.delta)),
                               h('td', entry.due ? prettydate(entry.due) : '')
                             ])
                           ))
@@ -225,7 +226,7 @@ query {
                           h('p.control', [
                             h('a.button.is-info', {
                               onClick: this.bitcoinPayRedirect
-                            }, 'Make payment')
+                            }, 'Make a Bitcoin payment')
                           ])
                         ])
                       ])
@@ -270,18 +271,23 @@ query {
   },
 
   bitcoinPayRedirect (e) {
-    window.fetch(`/billing/bitcoinpay/start/${this.state.willPay}/`, {
-      headers: new window.Headers({'Authorization': getToken()})
+    e.preventDefault()
+
+    log.info("We're going to redirect you to our Bitcoin payments provider.")
+
+    graphql.mutate(`
+($value: Float!) {
+  makePayment(value: $value)
+}
+    `, {value: this.state.willPay})
+    .then(r => {
+      if (r.makePayment && r.makePayment.slice(0, 4) === 'http') {
+        location.href = r.makePayment
+      } else {
+        throw new Error(r.makePayment)
+      }
     })
-      .then(r => r.text())
-      .then(url => {
-        if (url.slice(0, 4) === 'http') {
-          location.href = url
-          return
-        }
-        throw new Error(url)
-      })
-      .catch(log.error)
+    .catch(log.error)
   },
 
   changeColour (field, colour) {

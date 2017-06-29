@@ -21,7 +21,6 @@ func runServer() {
 		c.SendFile("client/logo.png")
 		return nil
 	})
-	router.Get("/billing/bitcoinpay/start/<value>/", BitcoinPayment)
 	router.Get("/billing/bitcoinpay/done/", BitcoinPayDone)
 	router.Post("/billing/bitcoinpay/ipn/", BitcoinPayIPN)
 	router.Get("/sites", serveClient)

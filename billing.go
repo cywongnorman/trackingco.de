@@ -11,54 +11,6 @@ import (
 	routing "github.com/qiangxue/fasthttp-routing"
 )
 
-const BITCOINPAY = "https://www.bitcoinpay.com/api/v1"
-
-func BitcoinPayment(c *routing.Context) error {
-	strvalue := c.Param("value")
-	value, err := strconv.Atoi(strvalue)
-	if err != nil {
-		return HTTPError{400, "invalid value: " + c.Param("value")}
-	}
-
-	email := extractEmailFromJWT(c.RequestCtx)
-	if email == "" {
-		email = s.LoggedAs
-		log.Print("forced auth as ", email)
-	}
-	if email == "" {
-		return HTTPError{401, "you're not logged in."}
-	}
-
-	res := struct {
-		Data struct {
-			PaymentURL string `json:"payment_url"`
-		} `json:"data"`
-	}{}
-
-	n, err := b.Post(BITCOINPAY+"/payment/btc", map[string]interface{}{
-		"settled_currency": "BTC",
-		"price":            value,
-		"currency":         "USD",
-		"return_url":       s.Host + "/billing/bitcoinpay/done/",
-		"notify_email":     "fiatjaf@gmail.com",
-		"notify_url":       s.Host + "/billing/bitcoinpay/ipn",
-		"item":             "trackingco.de " + strvalue + " USD payment",
-		"description":      "trackingco.de " + strvalue + " USD payment for account " + email,
-		"reference":        fmt.Sprintf("%s %s", email, value),
-	}, &res, nil)
-	if err != nil || n.Status() > 299 {
-		if err == nil {
-			err = fmt.Errorf("Bitcoinpay returned %d for '%s': %s",
-				n.Status(), n.Url, n.RawText())
-		}
-		log.Print("couldn't get BTC payment URL. " + err.Error())
-		return HTTPError{500, "Couldn't get BTC payment URL."}
-	}
-
-	fmt.Fprintf(c, res.Data.PaymentURL)
-	return nil
-}
-
 func BitcoinPayDone(c *routing.Context) error {
 	reason := string(c.QueryArgs().Peek("bitcoinpay-status"))
 

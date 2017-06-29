@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -630,14 +632,20 @@ var rootMutation = graphql.ObjectConfig{
 				}
 
 				tx := pg.Begin()
+
+				// ensure user account exists
+				if err = ensureUser(tx, email); err != nil {
+					tx.Rollback()
+					return nil, err
+				}
+
 				if err = tx.Create(&site); err != nil {
 					tx.Rollback()
 					return nil, err
 				}
 
 				err = tx.Exec(
-					`UPDATE users SET sites_order = array_append(sites_order, ?) WHERE email = ?`,
-					site.Code, email)
+					`UPDATE users SET sites_order = array_append(sites_order, ?) WHERE email = ?`, site.Code, email)
 				if err != nil {
 					tx.Rollback()
 					return nil, err
@@ -852,13 +860,60 @@ var rootMutation = graphql.ObjectConfig{
 				}
 
 				err = pg.Exec(
-					`UPDATE users SET colours = ? WHERE email = ?`,
-					colours, email)
+					`UPDATE users SET colours = ?
+                    WHERE email = ?`, colours, email)
 				if err != nil {
 					return Result{false, err.Error()}, err
 				}
 
 				return Result{true, ""}, nil
+			},
+		},
+		"makePayment": &graphql.Field{
+			Type: graphql.String,
+			Args: graphql.FieldConfigArgument{
+				"value": &graphql.ArgumentConfig{
+					Type:        graphql.Float,
+					Description: "a value in dollars",
+				},
+			},
+			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+				email := emailFromContext(p.Context)
+				value := p.Args["value"].(float64)
+				strvalue := strconv.Itoa(int(value))
+
+				res := struct {
+					Data struct {
+						PaymentURL string `json:"payment_url"`
+					} `json:"data"`
+				}{}
+
+				// ensure user account exists
+				if err = ensureUser(pg, email); err != nil {
+					return nil, err
+				}
+
+				n, err := b.Post(BITCOINPAY+"/payment/btc", map[string]interface{}{
+					"settled_currency": "BTC",
+					"price":            value,
+					"currency":         "USD",
+					"return_url":       s.Host + "/billing/bitcoinpay/done/",
+					"notify_email":     "fiatjaf@gmail.com",
+					"notify_url":       s.Host + "/billing/bitcoinpay/ipn",
+					"item":             "trackingco.de payment",
+					"description":      email + " account funding " + strvalue + " USD payment",
+					"reference":        fmt.Sprintf("%s %s", email, value),
+				}, &res, nil)
+				if err != nil || n.Status() > 299 {
+					if err == nil {
+						err = fmt.Errorf("Bitcoinpay returned %d for '%s': %s",
+							n.Status(), n.Url, n.RawText())
+					}
+					log.Print("couldn't get BTC payment URL. " + err.Error())
+					return nil, err
+				}
+
+				return res.Data.PaymentURL, err
 			},
 		},
 		"setPlan": &graphql.Field{
@@ -872,6 +927,7 @@ var rootMutation = graphql.ObjectConfig{
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 				email := emailFromContext(p.Context)
 				plan := p.Args["plan"].(float64)
+				planValue := float64(planValues[plan])
 
 				tx := pg.Begin()
 
@@ -880,15 +936,45 @@ var rootMutation = graphql.ObjectConfig{
                     SELECT sum(delta) FROM balances WHERE user_email = ?`,
 					email).Scan(&funds)
 
-				if funds < float64(planValues[plan]) {
+				if funds < planValue {
 					tx.Rollback()
 					err := errors.New("Please fund your account before upgrading.")
 					return Result{false, err.Error()}, err
 				}
 
+				// set user plan
 				tx.Exec(
 					`UPDATE users SET plan = ? WHERE email = ?`,
 					plan, email)
+
+				// insert first/update current charge
+				var last float64
+				err = tx.Raw(`
+SELECT id
+FROM balances
+WHERE user_email = ? AND
+      (time + due) > now()
+ORDER BY time DESC
+LIMIT 1
+                `, email).Scan(&last)
+				if err != nil {
+					tx.Rollback()
+					return Result{false, err.Error()}, err
+				}
+
+				log.Print("last ", last)
+				if last == 0 {
+					// insert
+					tx.Exec(
+						`INSERT INTO balances (user_email, delta, due) VALUES (?, ?, '1 month')`,
+						email, -planValue)
+
+				} else {
+					// update
+					tx.Exec(
+						`UPDATE balances SET delta = ? WHERE id = ?`,
+						-planValue, last)
+				}
 
 				if err = tx.Commit(); err != nil {
 					return Result{false, err.Error()}, err
@@ -913,4 +999,13 @@ func emailFromContext(ctx context.Context) string {
 		return email
 	}
 	return ""
+}
+
+func ensureUser(pg *igor.Database, email string) error {
+	return pg.Exec(`
+INSERT INTO users
+(email, sites_order, colours)
+VALUES (?, '{}'::text[], '{}')
+ON CONFLICT (email) DO NOTHING
+  `, email)
 }

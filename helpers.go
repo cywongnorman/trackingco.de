@@ -17,6 +17,8 @@ import (
 const (
 	DATEFORMAT  = "20060102"
 	MONTHFORMAT = "200601"
+
+	BITCOINPAY = "https://www.bitcoinpay.com/api/v1"
 )
 
 var planValues = map[float64]int{
