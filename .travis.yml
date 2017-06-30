@@ -1,0 +1,16 @@
+language: node_js
+node_js:
+  - "7.7.3"
+dist: trusty
+sudo: false
+deploy:
+  provider: heroku
+  api_key:
+    secure: Ekp1P0yU1vsEr0/DpWeJwwlKSiylzIB7Sq1GRlFkdd9SIY62vcGgd5lygTmL9nV0NwoCrKwPhR89qHPi4Ebsv7NDUdGHQw8FaHoWpKX1ED1B6Y2lFYll59nlZDv6BwCV03F2c5rZHdWODDUV28M6nar1HRMSIbO1LRaaF+nJNYNpDI1KZ7eiokMw+Dwdk52JuS72iAyf70dGOqtIqKMU8ebw9iRlHN9e3/n9aLkkp+ymNpMitzA2yH5xe22yHnIU2mw//SXYtK29whuByc2lBHCowkYHrkL0yq9KyCxIq18y8wge7CudwO5wLMvXsCCxQHm/R860kjwJz0M8Bcso5DSuW4bvwjU22McNqUceZPeQboINaASsZEgPkz4VAkHr61zRZuVPEs6JaDQuFX8OHBzoavDwpjmNgoyID1MTgSK1hoK8Vzd81jN403irNsQlKA03yCq32f9YaLKQ7AdE0lbxxO8dBY7YaesSliccHFFzSBl1wG0bFx6iHBYY3nzc1Dl2jMhKMtv63LSEC2gqKpjYPA+P74VdgRm+tHtWgYTr4IQTOVI4SVopoynawg0Z4FDp19vc9+vQTnSxJHU/AWLxf432OR0oqxJIvjdrv30b+z25TbPmVz/0WBr6FZl5WudrGica1cIB98/r6cCOZR3M01lmnd5dkfZr0Bv4IWI=
+  app: trackingcode
+  on:
+    repo: fiatjaf/trackingco.de
+    branch: master
+  skip_cleanup: true
+before_deploy:
+  - cd client && npm install && npm run build-prod && cd .. 
