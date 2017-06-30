@@ -23,9 +23,9 @@ const (
 
 var planValues = map[float64]int{
 	0: 0,
-	1: 4,
-	2: 8,
-	3: 46,
+	1: 5,
+	2: 10,
+	3: 50,
 }
 
 func presentDay() time.Time {
