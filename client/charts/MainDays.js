@@ -1,7 +1,7 @@
 const React = require('react')
 const h = require('react-hyperscript')
 const R = require('recharts')
-const num_ber = require('num-ber').format
+const n = require('format-number')({})
 
 const formatdate = require('../helpers').formatdate
 const mergeColours = require('../helpers').mergeColours
@@ -54,7 +54,7 @@ const Tooltip = function (props) {
         h('li.recharts-tooltip-item', {style: {color: item.color}}, [
           h('span.recharts-tooltip-item-name', names[item.name]),
           h('span.recharts-tooltip-item-separator', ' : '),
-          h('span.recharts-tooltip-item-value', num_ber(item.value, 0))
+          h('span.recharts-tooltip-item-value', n(item.value))
         ])
       ))
     ])
