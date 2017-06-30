@@ -11,7 +11,7 @@
   <nav class="nav">
     <div class="nav-left">
       <a class="nav-item"><img src=/favicon.ico alt="trackingcode logo"></a>
-      <a class="nav-item">trackingco.de</a>
+      <a class="nav-item is-hidden-mobile">trackingco.de</a>
     </div>
     <div class="nav-center">
       <a class="nav-item" href="#/" id="login">login to the dashboard</a>
@@ -326,16 +326,14 @@ window.signup.addEventListener('submit', function (e) {
           password: data.password,
           scope: 'openid'
         }, function (err, res) {
-          localStorage.setItem('_tcj', res.id_token)
-          location.hash = '#/'
+          location.hash = '#id_token=' + res.idToken
           location.pathname = '/sites'
         })
       }
       return
     }
 
-    localStorage.setItem('_tcj', res.id_token)
-    location.hash = '#/'
+    location.hash = '#id_token=' + res.idToken
     location.pathname = '/sites'
   })
 })

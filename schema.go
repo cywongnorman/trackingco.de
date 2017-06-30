@@ -962,12 +962,12 @@ LIMIT 1
 					return Result{false, err.Error()}, err
 				}
 
-				log.Print("last ", last)
 				if last == 0 {
 					// insert
-					tx.Exec(
-						`INSERT INTO balances (user_email, delta, due) VALUES (?, ?, '1 month')`,
-						email, -planValue)
+					tx.Exec(`
+INSERT INTO balances (user_email, delta, due)
+VALUES (?, ?, '1 month')
+                    `, email, -planValue)
 
 				} else {
 					// update

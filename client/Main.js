@@ -15,6 +15,7 @@ module.exports = React.createClass({
   getInitialState () {
     return {
       isLogged: false,
+      email: '',
       route: {
         component: () => h('div'),
         props: {}
@@ -24,7 +25,7 @@ module.exports = React.createClass({
 
   componentDidMount () {
     if (location.hash && location.hash.indexOf('token') !== -1) {
-      auth0.parseHash(location.hash, (err, result) => {
+      auth0.parseHash(location.hash, (err, res) => {
         if (err) {
           log.error("error parsing account credentials, you'll be logged out.")
           log.debug(err)
@@ -33,8 +34,9 @@ module.exports = React.createClass({
         }
 
         log.success("You're now logged in!")
-        setToken(result.idToken || result.id_token)
+        setToken(res.idToken || res.id_token)
         location.hash = ''
+        this.setState({email: res.idTokenPayload['https://trackingco.de/user/email']})
       })
     }
 
@@ -42,12 +44,8 @@ module.exports = React.createClass({
       this.setState({isLogged})
     })
 
-    page('/sites', () =>
-      this.setState({route: {component: CardsView}})
-    )
-    page('/sites/:code', (ctx) =>
-      this.setState({route: {component: SiteDetail, props: ctx.params}})
-    )
+    page('/sites', () => this.setState({route: {component: CardsView}}))
+    page('/sites/:code', (ctx) => this.setState({route: {component: SiteDetail, props: ctx.params}}))
     page('/public/:code', (ctx) =>
       this.setState({
         route: {
@@ -56,10 +54,7 @@ module.exports = React.createClass({
         }
       })
     )
-    page('/account', () =>
-      this.setState({route: {component: UserAccount}})
-    )
-
+    page('/account', () => this.setState({route: {component: UserAccount}}))
     page()
   },
 
@@ -71,14 +66,17 @@ module.exports = React.createClass({
             h('a.nav-item', [
               h('img', {src: '/favicon.ico', alt: 'trackingcode logo'})
             ]),
-            h('a.nav-item', 'trackingco.de')
+            h('a.nav-item.is-hidden-mobile', 'trackingco.de')
           ]),
           h('.nav-center', [
             this.state.isLogged
-            ? h('a', {className: 'nav-item', href: '/account'}, 'account')
+            ? h('a.nav-item.is-hidden-touch', this.state.email)
             : '',
             this.state.isLogged
-            ? h('a', {className: 'nav-item', href: '/sites'}, 'sites')
+            ? h('a.nav-item', {href: '/account'}, 'account')
+            : '',
+            this.state.isLogged
+            ? h('a.nav-item', {href: '/sites'}, 'sites')
             : h('a.nav-item', {href: auth0.getLoginURL()}, 'login'),
             this.state.isLogged
             ? h('a.nav-item', {key: 'logout', onClick: auth0.logout}, 'logout')
