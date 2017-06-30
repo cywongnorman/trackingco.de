@@ -15,7 +15,7 @@
     </div>
     <div class="nav-center">
       <a class="nav-item" href="#/" id="login">login to the dashboard</a>
-      <a class="nav-item" href="#/create">create your free account!</a>
+      <a class="nav-item" href="#/" id="signup">create your free account!</a>
     </div>
   </nav>
   <section class="alt">
@@ -220,47 +220,6 @@
           </div>
         </div>
       </div>
-      <div class="columns">
-        <div id="/create" class="column is-6 is-offset-3">
-          <div class="box signup">
-            <h3 class="title is-3 has-text-centered">Sign up now</h3>
-            <h6 class="subtitle is-6 has-text-centered">it will cost nothing and we will not spam you</h6>
-            <form method="GET" id="signup">
-              <p class="control has-icon">
-                <input class="input" name="username" type="text" placeholder="Username" title="optional, you'll be able to use this for logging in, but you'll also be able to use your email.">
-                <span class="icon is-small">
-                  <i class="fa fa-user"></i>
-                </span>
-              </p>
-              <p class="control has-icon">
-                <input class="input" name="email" type="email" placeholder="Email">
-                <span class="icon is-small">
-                  <i class="fa fa-envelope"></i>
-                </span>
-              </p>
-              <p class="control has-icon">
-                <input class="input" name="password" type="password" placeholder="Password">
-                <span class="icon is-small">
-                  <i class="fa fa-lock"></i>
-                </span>
-              </p>
-              <div class="level">
-                <div class="level-left">
-                  <div class="level-item"><button class="button">Sign up now</button></div>
-                </div>
-                <div class="level-left">
-                  <div class="level-item">
-                    or use these:&nbsp;&nbsp;
-                    <span class="icon"><a id="github"><i class="fa fa-github"></i></a></span>
-                    <span class="icon"><a id="google"><i class="fa fa-google"></i></a></span>
-                    <span class="icon"><a id="bitbucket"><i class="fa fa-bitbucket"></i></a></span>
-                  </div>
-                </div>
-              </p>
-            </form>
-          </div>
-        </div>
-      </div>
     </div>
   </section>
   <footer class="footer">
@@ -297,44 +256,5 @@ var url = auth0.client.buildAuthorizeUrl({
   scope: 'openid'
 })
 window.login.href = url
-window.signup.action = url
-window.github.href = url + '&connection=github'
-window.google.href = url + '&connection=google-oauth2'
-window.bitbucket.href = url + '&connection=bitbucket'
-
-window.signup.addEventListener('submit', function (e) {
-  e.preventDefault()
-
-  var data = {}
-  var fields = window.signup.querySelectorAll('[name]')
-  for (var i = 0; i < fields.length; i++) {
-    var field = fields[i]
-    data[field.name] = field.value
-  }
-
-  auth0.signupAndAuthorize({
-    connection: 'Username-Password-Authentication',
-    email: data.email,
-    password: data.password,
-    username: data.username
-  }, function (err, res) {
-    if (err) {
-      if (err.code === 'user_exists') {
-        auth0.client.login({
-          realm: 'Username-Password-Authentication',
-          username: data.username,
-          password: data.password,
-          scope: 'openid'
-        }, function (err, res) {
-          location.hash = '#id_token=' + res.idToken
-          location.pathname = '/sites'
-        })
-      }
-      return
-    }
-
-    location.hash = '#id_token=' + res.idToken
-    location.pathname = '/sites'
-  })
-})
+window.signup.href = url
 </script>
