@@ -902,7 +902,7 @@ var rootMutation = graphql.ObjectConfig{
 					"notify_url":       s.Host + "/billing/bitcoinpay/ipn",
 					"item":             "trackingco.de payment",
 					"description":      email + " account funding " + strvalue + " USD payment",
-					"reference":        fmt.Sprintf("%s %s", email, value),
+					"reference":        fmt.Sprintf("%s %f", email, value),
 				}, &res, nil)
 				if err != nil || n.Status() > 299 {
 					if err == nil {

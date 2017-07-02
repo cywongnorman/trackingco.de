@@ -67,7 +67,7 @@ func BitcoinPayIPN(c *routing.Context) error {
 
 	parts := strings.Split(res.Data.Ref, " ") // '<email> <value>'
 	email := parts[0]
-	value, err := strconv.Atoi(parts[1])
+	value, err := strconv.ParseFloat(parts[1], 64)
 	if err != nil {
 		log.Print("bitcoinpay IPN invalid ref: ", res.Data.Ref)
 		return HTTPError{http.StatusBadRequest, "wrong value sent."}
