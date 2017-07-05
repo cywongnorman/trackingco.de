@@ -46,6 +46,7 @@ query {
 }
     `)
     .then(r => this.setState(r))
+    .then(() => window.tc && window.tc())
     .catch(log.error)
   },
 
@@ -244,6 +245,7 @@ query {
 
   setPlan (code, e) {
     e.preventDefault()
+    window.tc && window.tc(4)
 
     if (this.state.me.billingHistory.reduce((acc, e) => acc + e.delta, 0) <= 0) {
       log.info('Please make a payment to fund your account before upgrading!')
@@ -272,6 +274,7 @@ query {
 
   bitcoinPayRedirect (e) {
     e.preventDefault()
+    window.tc && window.tc(7)
 
     log.info("We're going to redirect you to our Bitcoin payments provider.")
 
@@ -291,6 +294,7 @@ query {
   },
 
   changeColour (field, colour) {
+    window.tc && window.tc(1)
     graphql.mutate(`
 ($colours: ColoursInput!) {
   setColours(colours: $colours) {
@@ -313,6 +317,7 @@ query {
 
   addDomain (e) {
     e.preventDefault()
+    window.tc && window.tc(1)
     let hostname = this.state.newDomain
 
     graphql.mutate(`
@@ -335,6 +340,7 @@ query {
 
   removeDomain (e, host) {
     e.preventDefault()
+    window.tc && window.tc(1)
 
     graphql.mutate(`
 ($host: String!) {

@@ -33,6 +33,7 @@ query {
 }
     `)
     .then(r => this.setState(r))
+    .then(() => window.tc && window.tc())
     .catch(log.error)
   },
 
@@ -88,6 +89,7 @@ query {
   },
 
   saveSiteOrder () {
+    window.tc && window.tc(1)
     let order = this.state.me.sites.map(s => s.code)
 
     graphql.mutate(`

@@ -15,6 +15,7 @@ module.exports = withClickOutside(React.createClass({
   },
 
   create () {
+    window.tc && window.tc(4)
     graphql.mutate(`
       ($name: String!) {
         createSite(name: $name) {
