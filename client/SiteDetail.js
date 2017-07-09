@@ -166,7 +166,7 @@ query d($code: String!, $last: Int${usingMonths ? '' : ', $l: Int, $s: Int, $r: 
         log.error('error setting shared state:', r.shareSite.error)
         return
       }
-      log.info(`${this.props.site.name} is now ${!this.state.site.shareURL ? 'un' : ''}shared.`)
+      log.info(`This site is now ${!this.state.site.shareURL ? 'un' : ''}shared.`)
       this.query()
     })
     .catch(log.error)
