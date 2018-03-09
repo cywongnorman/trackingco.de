@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fjl/go-couchdb"
 	"github.com/galeone/igor"
 	"github.com/graphql-go/graphql"
+	"github.com/timjacobi/go-couchdb"
 )
 
 type GraphQLRequest struct {

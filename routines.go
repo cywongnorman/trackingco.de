@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	couchdb "github.com/fjl/go-couchdb"
 	"github.com/ogier/pflag"
+	"github.com/timjacobi/go-couchdb"
 )
 
 func daily() {

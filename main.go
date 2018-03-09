@@ -9,12 +9,12 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/fjl/go-couchdb"
 	"github.com/galeone/igor"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/speps/go-hashids"
-	napping "gopkg.in/jmcvetta/napping.v3"
-	mailgun "gopkg.in/mailgun/mailgun-go.v1"
+	"github.com/timjacobi/go-couchdb"
+	"gopkg.in/jmcvetta/napping.v3"
+	"gopkg.in/mailgun/mailgun-go.v1"
 	"gopkg.in/redis.v5"
 )
 
