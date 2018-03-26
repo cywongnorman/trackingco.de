@@ -26,7 +26,7 @@
     "react-document-title": "^2.0.2",
     "react-dom": "^15.4.2",
     "react-hyperscript": "^3.0.0",
-    "react-tangle": "github:fiatjaf/react-tangle",
+    "react-tangle-text": "2.4.0",
     "recharts": "^0.20.8",
     "riek": "^1.0.7",
     "throttleit": "^1.0.0",
@@ -38,7 +38,8 @@
   "scripts": {
     "watch": "find -name \"*.js\" ! -name \"bundle.js\" ! -path \"*node_modules*\" | entr browserifyinc -vd app.js -o bundle.js",
     "build": "browserify app.js -o bundle.js",
-    "build-prod": "npm run build"
+    "build-prod": "cd client && npm run build",
+    "install": "npm run build-prod"
   },
   "browserify": {
     "transform": [
