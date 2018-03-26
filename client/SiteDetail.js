@@ -34,8 +34,8 @@ const SiteDetail = React.createClass({
       usingMonths: false,
       sessionsLimit: 400,
       sessionsMinScore: 1,
-      sessionsReferrerSelected: '',
-      sessionsReferrerFilter: ''
+      sessionsReferrerSelected: undefined,
+      sessionsReferrerFilter: undefined
     }
   },
 
@@ -120,33 +120,33 @@ query d($code: String!, $last: Int${usingMonths ? '' : ', $l: Int, $s: Int, $r: 
           h('h6.subtitle.is-6', this.state.site.code)
         ]),
         this.state.dataMax === 0 && this.state.site.today.v === 0
-        ? (
-          h(NoData, {
-            ...this.state,
-            colours,
-            isOwner: true,
-            toggleSharing: this.toggleSharing,
-            confirmDelete: this.confirmDelete,
-            confirmRename: this.confirmRename
-          })
-        )
-        : (
-          h(Data, {
-            ...this.state,
-            colours,
-            isOwner: true,
-            updateNLastDays: this.query,
-            updateMinScore: v => { this.setState({sessionsMinScore: v}, this.query) },
-            updateSessionsReferrerSelected: data => {
-              this.setState({sessionsReferrerSelected: data.payload.referrer})
-            },
-            filterByReferrer: this.filterByReferrer,
-            dontFilterByReferrer: this.dontFilterByReferrer,
-            toggleSharing: this.toggleSharing,
-            confirmDelete: this.confirmDelete,
-            confirmRename: this.confirmRename
-          })
-        )
+          ? (
+            h(NoData, {
+              ...this.state,
+              colours,
+              isOwner: true,
+              toggleSharing: this.toggleSharing,
+              confirmDelete: this.confirmDelete,
+              confirmRename: this.confirmRename
+            })
+          )
+          : (
+            h(Data, {
+              ...this.state,
+              colours,
+              isOwner: true,
+              updateNLastDays: this.query,
+              updateMinScore: v => { this.setState({sessionsMinScore: v}, this.query) },
+              updateSessionsReferrerSelected: data => {
+                this.setState({sessionsReferrerSelected: data.payload.referrer})
+              },
+              filterByReferrer: this.filterByReferrer,
+              dontFilterByReferrer: this.dontFilterByReferrer,
+              toggleSharing: this.toggleSharing,
+              confirmDelete: this.confirmDelete,
+              confirmRename: this.confirmRename
+            })
+          )
       ])
     )
   },
@@ -219,15 +219,15 @@ query d($code: String!, $last: Int${usingMonths ? '' : ', $l: Int, $s: Int, $r: 
 
   filterByReferrer () {
     this.setState({
-      sessionsReferrerSelected: '',
+      sessionsReferrerSelected: undefined,
       sessionsReferrerFilter: this.state.sessionsReferrerSelected
     }, this.query)
   },
 
   dontFilterByReferrer () {
     this.setState({
-      sessionsReferrerSelected: '',
-      sessionsReferrerFilter: ''
+      sessionsReferrerSelected: undefined,
+      sessionsReferrerFilter: undefined
     }, this.query)
   }
 })
@@ -255,8 +255,9 @@ const Data = React.createClass({
       referrersTrie = this.state.referrersTrie
     } else {
       referrersTrie = urlTrie(
-        this.props.site.referrers.map(({a, c}) => ({url: a, count: c}))
-      , true)
+        this.props.site.referrers.map(({a, c}) => ({url: a, count: c})),
+        true
+      )
     }
 
     var referrers = []
@@ -314,8 +315,8 @@ const Data = React.createClass({
                     h('h4.subtitle.is-4', 'Bounce rate today:'),
                     h('h1.title.is-1',
                       typeof this.props.site.today.b === 'number'
-                      ? (this.props.site.today.b * 100).toFixed(1) + '%'
-                      : '-'
+                        ? (this.props.site.today.b * 100).toFixed(1) + '%'
+                        : '-'
                     )
                   ])
                 ])
@@ -339,16 +340,16 @@ const Data = React.createClass({
               h('.card-image', [
                 h('figure.image', [
                   this.props.usingMonths
-                  ? h(charts.MainMonths, {
-                    site: this.props.site,
-                    dataMax: this.props.dataMax,
-                    colours: this.props.me.colours
-                  })
-                  : h(charts.MainDays, {
-                    site: this.props.site,
-                    dataMax: this.props.dataMax,
-                    colours: this.props.me.colours
-                  })
+                    ? h(charts.MainMonths, {
+                      site: this.props.site,
+                      dataMax: this.props.dataMax,
+                      colours: this.props.me.colours
+                    })
+                    : h(charts.MainDays, {
+                      site: this.props.site,
+                      dataMax: this.props.dataMax,
+                      colours: this.props.me.colours
+                    })
                 ])
               ])
             ]),
@@ -373,14 +374,14 @@ const Data = React.createClass({
                 ]),
                 h('.card-content', {style: {paddingTop: '3px', paddingBottom: '5px'}}, [
                   h('.content', [
-                    h('p', this.props.sessionsReferrerFilter
+                    h('p', this.props.sessionsReferrerFilter !== undefined
                       ? [
                         'seeing sessions from ',
                         h('b', this.props.sessionsReferrerFilter),
                         'only, ',
                         h('a', {onClick: this.props.dontFilterByReferrer}, 'view from all?')
                       ]
-                      : this.props.sessionsReferrerSelected
+                      : this.props.sessionsReferrerSelected !== undefined
                         ? [
                           'selected ',
                           h('b', this.props.sessionsReferrerSelected),
@@ -412,10 +413,10 @@ const Data = React.createClass({
                       ))
                     ]),
                     pagesMore
-                    ? this.state.pagesOpen
-                      ? h('a', {onClick: () => { this.setState({pagesOpen: false}) }}, 'see less')
-                      : h('a', {onClick: () => { this.setState({pagesOpen: true}) }}, 'see more')
-                    : ''
+                      ? this.state.pagesOpen
+                        ? h('a', {onClick: () => { this.setState({pagesOpen: false}) }}, 'see less')
+                        : h('a', {onClick: () => { this.setState({pagesOpen: true}) }}, 'see more')
+                      : ''
                   ])
                 ])
               ]),
@@ -468,10 +469,10 @@ const Data = React.createClass({
                       ))
                     ]),
                     referrersMore
-                    ? this.state.referrersOpen
-                      ? h('a', {onClick: () => { this.setState({referrersOpen: false}) }}, 'see less')
-                      : h('a', {onClick: () => { this.setState({referrersOpen: true}) }}, 'see more')
-                    : ''
+                      ? this.state.referrersOpen
+                        ? h('a', {onClick: () => { this.setState({referrersOpen: false}) }}, 'see less')
+                        : h('a', {onClick: () => { this.setState({referrersOpen: true}) }}, 'see more')
+                      : ''
                   ])
                 ])
               ])
@@ -582,36 +583,36 @@ const About = React.createClass({
                 h('li', formatdate(this.props.site.created_at))
               ].concat(
                 this.state.isDeleting
-                ? [
-                  h('li.delete-site.cancel', [
-                    h('a.button.is-large', {
-                      onClick: e => {
-                        e.preventDefault()
-                        this.setState({isDeleting: false})
-                      }
-                    }, 'do not delete')
-                  ]),
-                  h('li.delete-site.confirm', [
-                    h('a.button.is-danger.is-small', {
-                      onClick: e => {
-                        e.preventDefault()
-                        this.props.confirmDelete()
-                        this.setState({isDeleting: false})
-                      }
-                    }, 'delete irrecoverably')
-                  ])
-                ]
-                : (
-                  h('li.delete-site.start', [
-                    h('a.button.is-danger.is-small', {
-                      style: {display: 'inline-block'},
-                      onClick: e => {
-                        e.preventDefault()
-                        this.setState({isDeleting: true})
-                      }
-                    }, 'delete site')
-                  ])
-                )
+                  ? [
+                    h('li.delete-site.cancel', [
+                      h('a.button.is-large', {
+                        onClick: e => {
+                          e.preventDefault()
+                          this.setState({isDeleting: false})
+                        }
+                      }, 'do not delete')
+                    ]),
+                    h('li.delete-site.confirm', [
+                      h('a.button.is-danger.is-small', {
+                        onClick: e => {
+                          e.preventDefault()
+                          this.props.confirmDelete()
+                          this.setState({isDeleting: false})
+                        }
+                      }, 'delete irrecoverably')
+                    ])
+                  ]
+                  : (
+                    h('li.delete-site.start', [
+                      h('a.button.is-danger.is-small', {
+                        style: {display: 'inline-block'},
+                        onClick: e => {
+                          e.preventDefault()
+                          this.setState({isDeleting: true})
+                        }
+                      }, 'delete site')
+                    ])
+                  )
               ))
             ])
           ])

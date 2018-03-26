@@ -15,10 +15,10 @@
 			"revisionTime": "2016-08-31T15:30:56Z"
 		},
 		{
-			"checksumSHA1": "1LWe3iDPpInibsVD1TzbTWSDXFc=",
+			"checksumSHA1": "4772zXrOaPVeDeSgdiV7Vp4KEjk=",
 			"path": "github.com/dgrijalva/jwt-go",
-			"revision": "f2193411bd642f7db03249fd79d5292c9b34916a",
-			"revisionTime": "2016-02-09T19:43:28Z"
+			"revision": "06ea1031745cb8b3dab3f6a236daf2b0aa468b7e",
+			"revisionTime": "2018-03-08T23:13:08Z"
 		},
 		{
 			"checksumSHA1": "g1hl3PrP9BRIfraRDolMpYUiop8=",

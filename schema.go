@@ -342,7 +342,10 @@ var siteType = graphql.NewObject(
 				},
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 					minscore, _ := p.Args["minscore"].(int)
-					referrer, filterreferrer := p.Args["referrer"].(string)
+					referrer, filterbyreferrer := p.Args["referrer"].(string)
+					if filterbyreferrer {
+						filterbyreferrer = referrer != ""
+					}
 					referrerhost := urlHost(referrer)
 					limit := p.Args["limit"].(int)
 					count := 0
@@ -352,7 +355,7 @@ var siteType = graphql.NewObject(
 					for i := len(days) - 1; i >= 0; i-- { // from newest day to oldest
 						day := days[i]
 						for ref, scoremap := range day.Sessions {
-							if filterreferrer && urlHost(ref) != referrerhost {
+							if filterbyreferrer && urlHost(ref) != referrerhost {
 								continue
 							}
 
