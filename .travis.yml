@@ -13,4 +13,4 @@ deploy:
     branch: master
   skip_cleanup: true
 before_deploy:
-  - cd client && npm install && npm run build-prod && cd .. 
+  - cd client && npm install && npm run build && cd .. 
