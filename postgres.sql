@@ -1,5 +1,5 @@
 CREATE TABLE users (
-  email text primary key,
+  id text primary key, -- id or account from accountd.xyz
   sites_order text[],
   colours jsonb,
   domains text[] NOT NULL DEFAULT '{}',
@@ -8,16 +8,8 @@ CREATE TABLE users (
 
 CREATE TABLE sites (
   code text primary key,
-  user_email text REFERENCES users(email),
+  owner text,
   name text,
   shared boolean DEFAULT false,
   created_at date DEFAULT now()
-);
-
-CREATE TABLE balances (
-  id serial PRIMARY KEY,
-  user_email text REFERENCES users(email),
-  time date DEFAULT now(),
-  delta integer, -- if positive, the user has paid something, if negative the user owes something
-  due interval -- if this is an invoice, is it valid for a month? an year?
 );

@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"sort"
-	"strconv"
 	"time"
 
 	"github.com/ogier/pflag"
@@ -27,15 +26,6 @@ func daily() {
 	yesterday := parsed.AddDate(0, 0, -1).Format(DATEFORMAT)
 
 	compileDayStats(yesterday)
-}
-
-func every8days() {
-	log.Print("# running every8day routine, today is ",
-		presentDay().Format(DATEFORMAT))
-
-	downgradeAccountsInDebtForMoreThanAWeek()
-	generateCharges()
-	notifyAccountsInDebt()
 }
 
 func monthly() {
@@ -68,7 +58,7 @@ func compileDayStats(day string) {
 
 	for _, site := range sites {
 		log.Print("-------------")
-		log.Print(" > site ", site.Code, " (", site.Name, "), from ", site.UserEmail, ":")
+		log.Print(" > site ", site.Code, " (", site.Name, "), from ", site.Owner, ":")
 
 		// make a couchdb document representing a day, with data from redis
 		stats := dayFromRedis(site.Code, day)
@@ -99,7 +89,7 @@ func compileMonthStats(month string) {
 
 	for _, site := range sites {
 		log.Print("-------------")
-		log.Print(" > site ", site.Code, " (", site.Name, "), from ", site.UserEmail, ":")
+		log.Print(" > site ", site.Code, " (", site.Name, "), from ", site.Owner, ":")
 
 		// make a couchdb document representing a month, with data from day couchdb documents
 		stats := Month{
@@ -180,7 +170,7 @@ func compileMonthStats(month string) {
 func fetchPayingSites() (sites []Site, err error) {
 	err = pg.Raw(`
 SELECT sites.* FROM sites
-INNER JOIN users ON users.email = sites.user_email
+INNER JOIN users ON users.id = sites.owner
 WHERE plan > 0`).
 		Scan(&sites)
 	return sites, err
@@ -205,176 +195,6 @@ func deleteOlderDayStats() {
 				break
 			}
 			cur = cur.AddDate(0, 0, -1)
-		}
-	}
-}
-
-func generateCharges() {
-	log.Print("-- generating new charges for all accounts with expired charge-times.")
-	var res []struct {
-		UserEmail string    `json:"user_email"`
-		ExpiresAt time.Time `json:"expires_at"`
-		Plan      float64   `json:"plan"`
-	}
-
-	// find all expired charges
-	err := pg.Raw(`
-SELECT DISTINCT ON (user_email)
-  user_email,
-  time + due AS expires_at,
-  plan
-FROM balances
-  INNER JOIN users ON user_email = users.email
-WHERE
-  due IS NOT NULL AND
-  plan > 0
-ORDER BY user_email, time DESC`).
-		Scan(&res)
-
-	if err != nil {
-		log.Print("   : failed to fetch account data for generating charges: ", err)
-		return
-	}
-
-	// create new ones starting at the day those expired
-	for _, row := range res {
-		if row.ExpiresAt.After(presentDay()) {
-			// last invoice not expired yet
-			continue
-		}
-
-		planValue := planValues[row.Plan]
-		err := pg.Exec(`
-INSERT INTO balances (user_email, time, delta, due)
-VALUES (?, ?, ?, '1 month')
-        `,
-			row.UserEmail,
-			row.ExpiresAt,
-			-planValue)
-		if err != nil {
-			log.Print("   : failed to create charge at account ", row, ": ", err)
-		} else {
-			log.Print("   : created charge at account ", row, " with value ", -planValue)
-		}
-	}
-}
-
-func notifyAccountsInDebt() {
-	log.Print("-- notifying accounts in debt.")
-	var res []struct {
-		UserEmail string  `json:"user_email"`
-		Balance   float64 `json:"balance"`
-	}
-
-	// find any account in debt
-	err := pg.Raw(`
-SELECT user_email, balance FROM (
-  SELECT user_email, sum(delta) AS balance
-  FROM balances
-  GROUP BY user_email
-)s WHERE balance < 0
-    `).Scan(&res)
-
-	if err != nil {
-		log.Print("failed to fetch accounts in debt: ", err)
-		return
-	}
-
-	for _, row := range res {
-		log.Print("   : notifying ", row.UserEmail, " for a debt balance of ", row.Balance)
-		if err = sendMessage(
-			row.UserEmail,
-			"Payment reminder at tracking.code",
-			`
-Dear user `+row.UserEmail+`,
-
-According to our records you have an outstanding unpaid balance of 
-$ `+strconv.Itoa(int(row.Balance))+` on your account at trackingco.de.
-
-We ask you to carry out the payment of the aforementioned amount using
-one of the our payment options found at https://trackingco.de/account or
-reply to this email if something is wrong or you want to say anything.
-
-If the balance continues in an unpaid state for 7 days your account will
-be automatically cancelled.
-
----
-
-Giovanni T. Parra
-trackingco.de
-            `,
-		); err != nil {
-			log.Print("failed to send downgrade email: ", err)
-		}
-	}
-}
-
-func downgradeAccountsInDebtForMoreThanAWeek() {
-	log.Print("-- downgrading accounts in debt for more than 8 days.")
-
-	var res []struct {
-		UserEmail string `json:"user_email"`
-	}
-
-	err := pg.Raw(`
-SELECT email FROM (
-  SELECT
-    email,
-    plan,
-    (SELECT sum(delta) FROM balances WHERE user_email = users.email GROUP BY user_email) AS balance,
-    (
-      SELECT time + due FROM balances
-      WHERE user_email = users.email AND due IS NOT NULL ORDER BY time DESC LIMIT 1
-    ) AS expires_at
-  FROM users
-)d
-WHERE balance < 0 AND plan > 0 AND (expires_at + '8 days') < now()
-    `).Scan(&res)
-
-	if err != nil {
-		log.Print("   : failed to fetch accounts with debt for more than 8 days.") // tell the user 7 days.
-		return
-	}
-
-	for _, row := range res {
-		log.Print("   : downgrading account ", row.UserEmail, " to plan 0")
-		tx := pg.Begin()
-		tx.Exec("UPDATE users SET plan = 0 WHERE users.email = ?", row.UserEmail)
-		tx.Exec(`
-UPDATE balances
-SET delta = 0
-WHERE user_email = ?
-  AND id = (
-    SELECT id FROM balances
-    WHERE user_email = ? AND due IS NOT NULL
-    ORDER BY time DESC LIMIT 1
-  )
-        `, row.UserEmail, row.UserEmail)
-		err := tx.Commit()
-		if err != nil {
-			log.Print("failed to downgrade account ", row.UserEmail)
-			continue
-		}
-
-		if err = sendMessage(
-			row.UserEmail,
-			"Your account at trackingco.de was downgraded.",
-			`
-Dear user `+row.UserEmail+`,
-
-Your account at https://trackingco.de/ was downgraded since we haven't
-seen your last payment which was due 7 days ago.
-
-Your analytics data stored at our servers wasn't yet deleted, but may
-be deleted at any time from now.
-
----
-
-Giovanni T. Parra
-trackingco.de
-            `,
-		); err != nil {
-			log.Print("failed to send downgrade email: ", err)
 		}
 	}
 }

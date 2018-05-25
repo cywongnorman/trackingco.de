@@ -1,37 +1,26 @@
 const localsync = require('localsync').default
 const Emitter = require('tiny-emitter')
-const Auth0 = require('auth0-js')
 
 const log = require('./log')
 
-var domain = 'trackingcode.auth0.com'
-const clientId = 'bT2dkdr6IzcVgOcTD5dVuG5NLGn1qps6'
-const returnTo = location.protocol + '//' + location.host
-const redirectTo = returnTo + '/sites'
-
-const auth0 = new Auth0.WebAuth({
-  domain: domain,
-  clientID: clientId,
-  responseType: 'id_token'
-})
-
-module.exports.auth0 = {
+module.exports.auth = {
   logout () {
-    module.exports.setToken(null)
-    location.href = `https://${domain}/v2/logout?returnTo=${returnTo}`
+    localStorage.removeItem('token')
   },
 
-  getLoginURL () {
-    var state = Math.random().toString()
-    return auth0.client.buildAuthorizeUrl({
-      redirectUri: redirectTo,
-      nonce: state,
-      scope: 'openid'
-    })
-  },
+  tryLogin (cb) {
+    let token = location.search.slice(1).split('&')
+      .map(kv => kv.split('='))
+      .filter(([k, v]) => k === 'token')
+      .map(([k, v]) => v)[0]
 
-  parseHash (hash, cb) {
-    auth0.parseHash(hash, cb)
+    window.history.replaceState('', '', '/')
+
+    if (token) {
+      localStorage.setItem('token', token)
+    }
+
+    return token || localStorage.getItem('token')
   }
 }
 

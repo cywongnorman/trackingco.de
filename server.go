@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"log"
 
-	"github.com/dgrijalva/jwt-go"
 	"github.com/qiangxue/fasthttp-routing"
 	"github.com/valyala/fasthttp"
 )
@@ -21,22 +20,20 @@ func runServer() {
 		c.SendFile("client/logo.png")
 		return nil
 	})
-	router.Get("/billing/bitcoinpay/done/", BitcoinPayDone)
-	router.Post("/billing/bitcoinpay/ipn/", BitcoinPayIPN)
 	router.Get("/sites", serveClient)
 	router.Get("/account", serveClient)
 	router.Get("/sites/<code>", serveClient)
 	router.Get("/public/<code>", serveClient)
 
 	router.Post("/_graphql", func(c *routing.Context) error {
-		email := extractEmailFromJWT(c.RequestCtx)
-		if email == "" {
-			email = s.LoggedAs
-			log.Print("forced auth as ", email)
+		user := extractUserFromJWT(c.RequestCtx)
+		if user == "" {
+			user = s.LoggedAs
+			log.Print("forced auth as ", user)
 		}
 		context := context.WithValue(
 			context.TODO(),
-			"loggeduser", email,
+			"loggeduser", user,
 		)
 
 		var gqr GraphQLRequest
@@ -82,34 +79,12 @@ func (h HTTPError) Error() string {
 	return h.message
 }
 
-func extractEmailFromJWT(ctx *fasthttp.RequestCtx) string {
-	jwtbytes := ctx.Request.Header.Peek("Authorization")
-	if len(jwtbytes) == 0 {
-		jwtbytes = ctx.Request.Header.Peek("authorization")
-		if len(jwtbytes) == 0 {
-			log.Print("no jwt.")
-			return ""
-		}
-	}
-
-	token, err := jwt.Parse(string(jwtbytes), func(token *jwt.Token) (interface{}, error) {
-		return []byte(s.Auth0Secret), nil
-	})
+func extractUserFromJWT(ctx *fasthttp.RequestCtx) string {
+	token := string(ctx.Request.Header.Peek("Authorization"))
+	user, err := acd.VerifyAuth(token)
 	if err != nil {
-		log.Print("failed to parse the jwt '", string(jwtbytes), "': ", err)
+		ctx.Error("wrong authorization token: "+token, 401)
 		return ""
 	}
-
-	if token.Method != jwt.SigningMethodHS256 {
-		log.Print("expected jwt signed with HS256, but got ", token.Method)
-		return ""
-	}
-
-	if !token.Valid {
-		log.Print("parsed jwt is invalid.")
-		return ""
-	}
-
-	email, _ := token.Claims.(jwt.MapClaims)["https://trackingco.de/user/email"].(string)
-	return email
+	return user
 }

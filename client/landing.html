@@ -16,6 +16,7 @@
     <div class="nav-center">
       <a class="nav-item" href="#/" id="login">login to the dashboard</a>
       <a class="nav-item" href="#/" id="signup">create your free account!</a>
+      <a class="nav-item" href="/sites" id="dashboard" style="display: none">Go to your dashboard</a>
     </div>
   </nav>
   <section class="alt">
@@ -235,28 +236,16 @@
   </footer>
 </body>
 
-<script src=https://cdn.auth0.com/js/auth0/8.3.0/auth0.min.js></script>
 <script>
-var domain = 'trackingcode.auth0.com'
-var clientId = 'bT2dkdr6IzcVgOcTD5dVuG5NLGn1qps6'
-var redirectTo = location.protocol + '//' + location.host + '/sites'
-
-var state = Math.random().toString()
-localStorage.setItem('_auth0state', state)
-
-var auth0 = new auth0.WebAuth({
-  domain: domain,
-  clientID: clientId,
-  responseType: 'id_token'
-})
-
-var url = auth0.client.buildAuthorizeUrl({
-  redirectUri: redirectTo,
-  nonce: state,
-  scope: 'openid'
-})
-window.login.href = url
-window.signup.href = url
+if (localStorage.getItem('token')) {
+  window.login.style.display = 'none'
+  window.signup.style.display = 'none'
+  window.dashboard.style.display = null
+} else {
+  let url = `https://accountd.xyz/login-screen?redirect_uri=${location.protocol}//${location.host}/sites&site_name=trackingco.de`
+  window.login.href = url
+  window.signup.href = url
+}
 </script>
 <script>;(function (d, s, c) {
   var x, h, n = Date.now()

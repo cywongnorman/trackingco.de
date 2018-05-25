@@ -3,8 +3,6 @@ const h = require('react-hyperscript')
 const withClickOutside = require('react-click-outside')
 const TwitterPicker = require('react-color').TwitterPicker
 const randomColor = require('randomcolor')
-const n = require('format-number')({prefix: '$'})
-const fecha = require('fecha')
 const DocumentTitle = require('react-document-title')
 const BodyStyle = require('body-style')
 
@@ -22,8 +20,6 @@ const plans = [
   {name: 'Third', code: 3}
 ]
 
-const prettydate = iso => fecha.format(new Date(iso), 'mediumDate')
-
 const UserAccount = React.createClass({
   getInitialState () {
     return {
@@ -39,9 +35,8 @@ query {
   me {
     colours { ...${coloursfragment} }
     domains
-    email
+    id
     plan
-    billingHistory { id, time, delta, due }
   }
 }
     `)
@@ -79,32 +74,32 @@ query {
                       ]),
                       h('.card-content', [
                         this.state.me.plan < 2
-                        ? h('p', 'Please upgrade your account to gain access to this feature.')
-                        : (
-                          h('ul', this.state.me.domains.map(hostname =>
-                            h('li', {key: hostname}, [
-                              hostname + ' ',
-                              h('a.delete', {onClick: e => { this.removeDomain(e, hostname) }})
-                            ])
-                          ).concat(
-                            h('form', {key: '~', onSubmit: this.addDomain}, [
-                              h('p.control.has-icon', [
-                                h('input.input', {
-                                  type: 'text',
-                                  onChange: e => { this.setState({newDomain: e.target.value}) },
-                                  value: this.state.newDomain,
-                                  placeholder: 'Add a domain or subdomain'
-                                }),
-                                h('span.icon.is-small', [
-                                  h('i.fa.fa-plus')
-                                ])
-                              ]),
-                              h('p.control', [
-                                h('button.button', 'Save')
+                          ? h('p', 'Please upgrade your account to gain access to this feature.')
+                          : (
+                            h('ul', this.state.me.domains.map(hostname =>
+                              h('li', {key: hostname}, [
+                                hostname + ' ',
+                                h('a.delete', {onClick: e => { this.removeDomain(e, hostname) }})
                               ])
-                            ])
-                          ))
-                        )
+                            ).concat(
+                              h('form', {key: '~', onSubmit: this.addDomain}, [
+                                h('p.control.has-icon', [
+                                  h('input.input', {
+                                    type: 'text',
+                                    onChange: e => { this.setState({newDomain: e.target.value}) },
+                                    value: this.state.newDomain,
+                                    placeholder: 'Add a domain or subdomain'
+                                  }),
+                                  h('span.icon.is-small', [
+                                    h('i.fa.fa-plus')
+                                  ])
+                                ]),
+                                h('p.control', [
+                                  h('button.button', 'Save')
+                                ])
+                              ])
+                            ))
+                          )
                       ])
                     ])
                   ])
@@ -119,11 +114,11 @@ query {
                       ]),
                       h('.card-content', [
                         this.state.me.plan < 1
-                        ? h('p', 'Please upgrade your account to gain access to this feature.')
-                        : h(Colours, {
-                          ...this.state,
-                          onColour: this.changeColour
-                        })
+                          ? h('p', 'Please upgrade your account to gain access to this feature.')
+                          : h(Colours, {
+                            ...this.state,
+                            onColour: this.changeColour
+                          })
                       ])
                     ])
                   ])
@@ -135,7 +130,7 @@ query {
                         h('.card-header-title', 'Account information')
                       ]),
                       h('.card-content', [
-                        h('p', `email: ${this.state.me.email}`),
+                        h('p', `user: ${this.state.me.id}`),
                         h('p', `plan: ${plans[this.state.me.plan].name}`)
                       ])
                     ])
@@ -154,87 +149,36 @@ query {
                       h('.card-content', [
                         h('h2.title.is-2', `${plans[this.state.me.plan].name} Plan`),
                         this.state.me.plan >= (plans.length - 1)
-                        ? h('p', 'Contact us if you want a bigger plan.')
-                        : h('div', [
-                          h('h3.title.is-3', 'Upgrade to:'),
-                          h('ul', plans.slice(this.state.me.plan + 1).map(({name, code}) =>
-                            h('li', [
-                              h('button.button.is-large.is-warning', {
-                                onClick: e => this.setPlan(code, e)
-                              }, `${name} Plan`)
-                            ])
-                          ))
-                        ]),
+                          ? h('p', 'Contact us if you want a bigger plan.')
+                          : h('div', [
+                            h('h3.title.is-3', 'Upgrade to:'),
+                            h('ul', plans.slice(this.state.me.plan + 1).map(({name, code}) =>
+                              h('li', [
+                                h('button.button.is-large.is-warning', {
+                                  onClick: e => this.setPlan(code, e)
+                                }, `${name} Plan`)
+                              ])
+                            ))
+                          ]),
                         h('hr'),
                         this.state.me.plan === 0
-                        ? 'You have no guarantees in the Free Plan, all your data can be erased at any time.'
-                        : h('div', [
-                          h('h6.title.is-6', 'Downgrade to:'),
-                          h('ul', plans.slice(0, this.state.me.plan).map(({name, code}) =>
-                            h('li', [
-                              h('button.button.is-small.is-light', {
-                                onClick: e => this.setPlan(code, e)
-                              }, `${name} Plan`)
-                            ])
-                          ))
-                        ])
-                      ])
-                    ])
-                  ])
-                ])
-              ]),
-              h('.tile.is-6', [
-                h('.tile.is-parent', [
-                  h('.tile.is-child', [
-                    h('.card.account-billing-history', [
-                      h('.card-header', [
-                        h('.card-header-title', 'Billing History')
-                      ]),
-                      h('.card-content', [
-                        h('h3.title.is-3', [
-                          h('small.small', 'Balance: '),
-                          n(this.state.me.billingHistory.reduce((acc, entry) => acc + entry.delta, 0), 2)
-                        ]),
-                        h('table.table', [
-                          h('thead', [
-                            h('tr', [
-                              h('th', 'date'),
-                              h('th', 'kind'),
-                              h('th', 'value'),
-                              h('th', 'valid until')
-                            ])
-                          ]),
-                          h('tbody', this.state.me.billingHistory.map(entry =>
-                            h('tr', {key: entry.id, id: entry.id}, [
-                              h('td', prettydate(entry.time)),
-                              h('td', entry.due ? 'charge' : 'payment'),
-                              h('td', n(entry.delta)),
-                              h('td', entry.due ? prettydate(entry.due) : '')
-                            ])
-                          ))
-                        ]),
-                        h('hr'),
-                        h('.payment', [
-                          h('p.control', [
-                            h('a.button.is-static.is-disabled', '$')
-                          ]),
-                          h('p.control', [
-                            h('input.input', {
-                              onChange: e => this.setState({willPay: e.target.value}),
-                              value: this.state.willPay
-                            })
-                          ]),
-                          h('p.control', [
-                            h('a.button.is-info', {
-                              onClick: this.bitcoinPayRedirect
-                            }, 'Make a Bitcoin payment')
+                          ? 'You have no guarantees in the Free Plan, all your data can be erased at any time.'
+                          : h('div', [
+                            h('h6.title.is-6', 'Downgrade to:'),
+                            h('ul', plans.slice(0, this.state.me.plan).map(({name, code}) =>
+                              h('li', [
+                                h('button.button.is-small.is-light', {
+                                  onClick: e => this.setPlan(code, e)
+                                }, `${name} Plan`)
+                              ])
+                            ))
                           ])
-                        ])
                       ])
                     ])
                   ])
                 ])
               ]),
+              h('.tile.is-6'),
               h('.tile.is-2')
             ])
           ])
@@ -246,11 +190,6 @@ query {
   setPlan (code, e) {
     e.preventDefault()
     window.tc && window.tc(4)
-
-    if (this.state.me.billingHistory.reduce((acc, e) => acc + e.delta, 0) <= 0) {
-      log.info('Please make a payment to fund your account before upgrading!')
-      return
-    }
 
     graphql.mutate(`
 ($code: Float!) {
@@ -268,27 +207,6 @@ query {
         st.me.plan = code
         return st
       })
-    })
-    .catch(log.error)
-  },
-
-  bitcoinPayRedirect (e) {
-    e.preventDefault()
-    window.tc && window.tc(7)
-
-    log.info("We're going to redirect you to our Bitcoin payments provider.")
-
-    graphql.mutate(`
-($value: Float!) {
-  makePayment(value: $value)
-}
-    `, {value: this.state.willPay})
-    .then(r => {
-      if (r.makePayment && r.makePayment.slice(0, 4) === 'http') {
-        location.href = r.makePayment
-      } else {
-        throw new Error(r.makePayment)
-      }
     })
     .catch(log.error)
   },

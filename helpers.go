@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"math/rand"
 	"net/url"
 	"strconv"
@@ -17,8 +16,6 @@ import (
 const (
 	DATEFORMAT  = "20060102"
 	MONTHFORMAT = "200601"
-
-	BITCOINPAY = "https://www.bitcoinpay.com/api/v1"
 )
 
 var planValues = map[float64]int{
@@ -184,13 +181,4 @@ func sessionsFromScoremap(scoremap string) []int {
 		}
 	}
 	return sessions
-}
-
-func sendMessage(to, subject, body string) error {
-	message := mg.NewMessage("help@m.trackingco.de", subject, body, to)
-	r, _, err := mg.Send(message)
-	if err != nil {
-		return errors.New("error sending email: " + err.Error() + ", " + r)
-	}
-	return nil
 }
