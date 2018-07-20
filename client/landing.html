@@ -1,250 +1,82 @@
 <!doctype html>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>trackingco.de - minimalist website analytics</title>
+<meta name="description" content="Website analytics for people with a lot of small sites.">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+<link href="https://overpass-30e2.kxcdn.com/overpass.css" rel="stylesheet">
 
-<meta charset=utf-8>
-<meta name=viewport content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<link href=https://cdnjs.cloudflare.com/ajax/libs/bulma/0.3.1/css/bulma.min.css rel=stylesheet>
-<link href=/client/style.css rel=stylesheet>
-<link href=https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css rel=stylesheet>
-<title>trackingco.de</title>
+<style>
+* { padding: 0; margin: 0; outline: none; border: none; appearance: none; font-family: 'overpass', sans-serif; color: #46494d; border-radius: none; }
+html, body { background: #fff; text-align: center; }
+body { padding: 8px; }
+.main { padding: 20px 0; max-width: 640px; min-height: 100vh; height: 100%; background: #fff; margin: 0 auto; text-align: left; }
+h1, h3, p { margin-bottom: 20px; }
+h1 { line-height: 1.2; font-weight: 600; font-size: 36px; color: #232526; margin-bottom: 60px; }
+h3 { line-height: 1.2; font-weight: 600; font-size: 24px; color: #232526; }
+p { line-height: 1.6; font-size: 16px; font-weight: 400; }
+strong { font-weight: 800; }
+small { font-size: 14px; color: #33383c; margin: 24px 0; font-weight: 300; }
+span { color: #689479; }
+img { max-width: 100%; display: block; margin: 0 0 20px 0; }
 
-<body id="landing">
-  <nav class="nav">
-    <div class="nav-left">
-      <a class="nav-item"><img src=/favicon.ico alt="trackingcode logo"></a>
-      <a class="nav-item is-hidden-mobile">trackingco.de</a>
-    </div>
-    <div class="nav-center">
-      <a class="nav-item" href="#/" id="login">login to the dashboard</a>
-      <a class="nav-item" href="#/" id="signup">create your free account!</a>
-      <a class="nav-item" href="/sites" id="dashboard" style="display: none">Go to your dashboard</a>
-    </div>
-  </nav>
-  <section class="alt">
-    <div class="container">
-      <div class="columns is-multiline">
-        <div class="column is-10 is-offset-1">
-          <h1 class="title">
-            <b>Simple</b>, powerful <i>but not unlimited</i>, <b>cheap</b> and <b>open-source</b> web analytics.
-          </h1>
-        </div>
-        <div class="column is-12">
-          <figure class="image">
-            <img src="/client/images/dashboard.png">
-          </figure>
-        </div>
-        <div class="column is-10 is-offset-1">
-          <div class="content">
-            <p>Are you tired of Google Analytics?
-            <ul>
-              <li>With all its configurations, admin screens, users configuration, reporting sections, heavy charts?</li>
-              <li>Are you tired of referrer spam, of the fact that web analytics don't work with adblockers?</li>
-              <li>Do you run multiple websites and just want to track simple metrics?</li>
-              <li>Is it true for you that segmentation based on browser, country, search terms or social media are somewhat useless features?</li>
-              <li>Do you want to see a quick summary of each individual visitor of your site?</li>
-              <li>Have you looked up and found that all Google Analytics competitors are too expensive?</li>
-            </ul>
-            <p>Well, if you answered "yes" to any of the previous questions, than maybe <b>trackingco.de</b> is for you.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-  <section>
-    <div class="container">
-      <div class="columns is-multiline">
-        <div class="column is-10 is-offset-1">
-          <h3 class="title">Our unique features</h3>
-        </div>
-      </div>
-      <div class="tile is-ancestor">
-        <div class="tile is-vertical is-6">
-          <div class="tile is-parent">
-            <div class="tile is-child">
-              <div class="box">
-                <h4 class="title is-4">only the data that matters</h4>
-                <figure class="image">
-                  <img src="/client/images/basics.png">
-                </figure>
-                <small>You don't need any special skills to just see how many people are visiting your site.</small>
-              </div>
-            </div>
-          </div>
-          <div class="tile">
-            <div class="tile is-parent is-vertical">
-              <div class="tile is-child">
-                <div class="box">
-                  <h4 class="title is-4">host it yourself: it's open source!</h4>
-                  <small>check it out on <a href="https://github.com/fiatjaf/trackingco.de">GitHub</a>!</small>
-                </div>
-              </div>
-              <div class="tile is-child">
-                <div class="box">
-                  <h4 class="title is-4">bypass adblockers by using your own domain</h4>
-                  <small>If you use <a href="https://blog.cloudflare.com/introducing-universal-ssl/" target="_blank">Cloudflare Universal SSL</a> and register your domain to your <b>trackingco.de</b> account you can use it instead of our default tracking domain to submit data.</small>
-                </div>
-              </div>
-            </div>
-            <div class="tile is-parent is-vertical">
-              <div class="tile is-child">
-                <div class="box ui-colors">
-                  <h4 class="title is-4">you can change the UI colors</h4>
-                  <small>The rainbow is the limit!</small>
-                </div>
-              </div>
-              <div class="tile is-child">
-                <div class="box">
-                  <h4 class="title is-4">works on your phone</h4>
-                  <small>Not an app, just a responsive website that will show you the data.</small>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="tile is-6 is-vertical">
-          <div class="tile">
-            <div class="tile is-parent is-vertical">
-              <div class="tile is-child">
-                <div class="box">
-                  <h4 class="title is-4">share your data with whomever you want!</h4>
-                  <small title="There's also the option to share privately to selected accounts.">Make individual sites public, and other people may see them without having to register! (and if they have an account they even add the shared site to their dashboard!)</small>
-                </div>
-              </div>
-              <div class="tile is-child">
-                <div class="box">
-                  <h4 class="title is-4">GraphQL API</h4>
-                  <small>Are you a developer?</small>
-                </div>
-              </div>
-            </div>
-            <div class="tile is-parent is-vertical">
-              <div class="tile is-child">
-                <div class="box">
-                  <h4 class="title is-4">your data is not owned by a big evil company</h4>
-                  <small>It's in your hands, and you can export it whenever you want!</small>
-                </div>
-              </div>
-              <div class="tile is-child">
-                <div class="box">
-                  <h4 class="title is-4">setup is as simple as it can get, ideal for multiple sites</h4>
-                  <small>Click a <span class="icon"><i class="fa fa-plus"></i></span> button, give a name to the site and it's done, you get a tracking code to install on your HTML.</small>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="tile is-parent">
-            <div class="tile is-child">
-              <div class="box">
-                <h4 class="title is-4">visualize each visitor session in a glimpse</h4>
-                <small>Each visitor is recorded along with the referrer through which he came and a number of points.</small>
-                <figure class="image">
-                  <img src="/client/images/sessions.png">
-                </figure>
-                <small>By default these points correspond to the number of pages visited, but you can customize them for simple conversion tracking or other things.</small>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-  <section class="alt">
-    <div class="container">
-      <div class="columns is-multiline">
-        <div class="column is-10 is-offset-1">
-          <h3 class="title">Why is <b>trackingco.de</b> so good?</h3>
-          <div class="content">
-            <p>It is a fair question to raise -- not in the way it is formulated, assuming our service is actually good, but more in the likes of <b>why isn't any other service that provides all you do for such a small price?</b></p>
-            <p>Well, there could be tons of web analytics as a service out there, as there are tons of services for many common tasks people of the internet face, most of them are free or have a free tier, and many of them very good. For web analytics, however, this is not so easy. Web analytics requires at least a database that takes lots of disk space. These things are not as cheap as a normal webserver with a database of only a handful items for each person using the app.</p>
-            <p><b>trackingco.de</b> does nothing too different here. It only stores the data in a compacted format, but yet in a database from where it can be indexed and served. That seems to work very well, and we found a solution that allows us to offer some advanced features, but still not take too much disk space. Of course, we're still unable to offer some of the fancy features some of our competitors do, but most web analytics users aren't going to need those anyway.</p>
-          </div>
-        </div>
-        <div class="column is-10 is-offset-1">
-          <h3 class="title">Which features are missing?</h3>
-          <div class="content">
-            <p>Although <b>trackingco.de</b> is great, it is not the not the definitive web analytics tool that will solve all the problems. If you're relying on
-            <ul>
-              <li>geolocation (tagging visitors by country, city etc.);</li>
-              <li>browser or operating system usage statistics;</li>
-              <li>screen sizes measurements;</li>
-              <li>very specific conversion/goal tracking; or</li>
-              <li>A/B testing (split-tests)</li>
-            </ul>
-            Then you probably shouldn't use our services.
-            </p>
-          </div>
-      </div>
-    </div>
-  </section>
-  <section>
-    <div class="container">
-      <div class="columns is-multiline">
-        <div class="column is-12">
-          <h3 class="title">Monthly Pricing</h3>
-        </div>
-        <div class="column is-4">
-          <div class="box pricing">
-            <table class="table">
-              <tr><td><h2 class="title is-2"><b>$5</b></h2></td></tr>
-              <tr><td>unlimited sites</td></tr>
-              <tr><td>100,000 pageviews each month</td></tr>
-              <tr><td>you can share your sites publicly</td></tr>
-            </table>
-          </div>
-        </div>
-        <div class="column is-4">
-          <div class="box pricing">
-            <table class="table">
-              <tr><td><h2 class="title is-2"><b>$10</b></h2></td></tr>
-              <tr><td>unlimited sites</td></tr>
-              <tr><td>250,000 pageviews</td></tr>
-              <tr><td>everything in the previous plan</td></tr>
-              <tr><td>you can use your own domain</td></tr>
-            </table>
-          </div>
-        </div>
-        <div class="column is-4">
-          <div class="box pricing">
-            <table class="table">
-              <tr><td><h2 class="title is-2"><b>$50</b></h2></td></tr>
-              <tr><td>unlimited sites</td></tr>
-              <tr><td>1,000,000 pageviews</td></tr>
-              <tr><td>everything in the previous plan</td></tr>
-              <tr><td>you can share your sites privately</td></tr>
-            </table>
-          </div>
-        </div>
-      </div>
-      <div class="columns">
-        <div class="column is-8 is-offset-2">
-          <div class="content">
-            <p>Is there a free plan?, you may ask, and the answer is "not actually". You can have a <b>trackingco.de</b> account for free and you can even create a site and track some metrics into it, but it will not last long. We have some small limits that will let you see how everything works, but are not suitable for any website that has actual visitors.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-  <footer class="footer">
-    <div class="container">
-      <div class="content is-pulled-left">
-        © <a href="https://fiatjaf.alhur.es/">fiatjaf</a> 2017
-      </div>
-      <div class="content is-pulled-right">
-        <a href="/terms">terms of service</a> / 
-        <a href="/privacy">privacy policy</a>
-      </div>
-    </div>
-  </footer>
-</body>
+#login, #dashboard { margin-bottom: 2em; }
 
+a { cursor: pointer; }
+a:not(.button) { color: #689479; }
+a.button { text-decoration: none; display: inline-block; width: auto; }
+
+input, button, .button { padding: 12px; box-sizing: border-box; font-size: 16px; width: 100%; display: block; }
+input { background: #f5f7fa; font-weight: 400; }
+button, .button { background: #689479; color: #fff; font-weight: 700; padding: 12px 24px; }
+
+@media (min-width: 800px) {
+  input, button { width: auto; display: inline-block; }
+  input { width: 400px; }
+  img { max-width: 140%; display: block; margin: 40px 0 40px -20%; }
+  .main { margin: 60px auto; }
+}
+</style>
+
+<div class="main">
+  <h1><span>trackingco.de</span>, simple website analytics you can pay with Lightning Bitcoin</h1>
+  <p>You have a simple website, or multiple simple websites, or multiple small webapps. You don't need all the features Google Analytics offers, you just want to know how many people are browsing your sites and from where they're coming.</p>
+  <p><strong>trackingco.de was made for you</strong>. It tracks just the basic stuff, it doesn't try to do anything more, it's just visitors, pageviews, referrers and pages viewed.</p>
+  <p>The interface is light and makes it easy to setup new sites (but you can use just one, if you want).</p>
+
+  <h3>trackingco.de also have other unique features</h3>
+  <p>It's possible to a share website analytics with everyone. Just make your site "shared" and give the link to your partners or even your visitors.</p>
+  <p>You can use your own subdomain as the tracking endpoint. This way you can bypass adblockers (if someday they start blocking the t.trackingco.de domain) and get correct statistics.</p>
+  <p>trackingco.de service is <strong>payable by Lightning Bitcoin</strong> only. If you don't know what that is, <a href="https://www.youtube.com/results?search_query=lightning+bitcoin">try one of these</a> and get yourself a <a href="http://lightning-wallet.com/">wallet</a>.</p>
+  <p>You can change the UI colors of the dashboard. Frankly, this is the best feature ever built into a webapp.</p>
+
+  <div id="login">
+    <h3>Get started with trackingco.de</h3>
+    <a class="button">Login or sign up</a>
+    <small>You'll be prompted to choose a username on an external site, accountd.xyz.</small>
+  </div>
+  <div id="dashboard">
+    <h3>View your dashboard</h3>
+    <a href="/sites" class="button">Enter</a>
+  </div>
+  
+  <a href="/client/images/dashboard.png" title="See it larger..."><img src="/client/images/dashboard.png" alt="trackingco.de screenshot"></a>
+
+  <p style="background:#ffffb5; padding: 16px; display: block; margin: 32px -16px 20px -16px;">Want to see a live demo? <a href="https://trackingco.de/public/9ykvs7rk">View the stats for this same website here</a></p>
+  
+  <p>The price for this service is <strong>$5</strong> per month for unlimited (reasonably) usage. But it is free to try out. Sign up, start using, then get a payment request in the account page if you like what you see.</p>
+
+  <p><strong><a href="https://github.com/fiatjaf/trackingco.de">View trackingco.de on GitHub</a> | <a href="https://alhur.es/">Browse other minimalist webapps we've made</a></strong></p>
+  
 <script>
 if (localStorage.getItem('token')) {
   window.login.style.display = 'none'
-  window.signup.style.display = 'none'
   window.dashboard.style.display = null
 } else {
   let url = `https://accountd.xyz/login-screen?redirect_uri=${location.protocol}//${location.host}/sites&site_name=trackingco.de`
-  window.login.href = url
-  window.signup.href = url
+  window.login.querySelector('a').href = url
+  window.dashboard.style.display = 'none'
 }
 </script>
 <script>;(function (d, s, c) {
