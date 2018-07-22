@@ -90,7 +90,8 @@ func compileMonthStats(month string) {
 		log.Print("-------------")
 		log.Print(" > site ", site.Code, " (", site.Name, "), from ", site.Owner, ":")
 
-		// make a couchdb document representing a month, with data from day couchdb documents
+		// make a couchdb document representing a month,
+		// with data from day couchdb documents
 		stats := Month{
 			Id:           makeMonthKey(site.Code, month),
 			TopReferrers: make(map[string]int, 10),
@@ -163,6 +164,16 @@ func compileMonthStats(month string) {
 			continue
 		}
 		log.Print("   : saved on couch.")
+
+		// track this user as having used the service this month
+		_, err = pg.Exec(`
+UPDATE users
+SET months_using = array_append(array_remove(months_using, $2), $2)
+WHERE id = $1
+        `, site.Owner, month)
+		if err != nil {
+			log.Print("   : failed to set months_using: ", err)
+		}
 	}
 }
 
