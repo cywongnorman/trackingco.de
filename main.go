@@ -2,15 +2,16 @@ package main
 
 import (
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
 
 	"github.com/fiatjaf/accountd"
-	"github.com/galeone/igor"
+	"github.com/jmoiron/sqlx"
 	"github.com/kelseyhightower/envconfig"
+	_ "github.com/lib/pq"
+	"github.com/rs/zerolog"
 	"github.com/speps/go-hashids"
 	"github.com/timjacobi/go-couchdb"
 	"gopkg.in/jmcvetta/napping.v3"
@@ -25,6 +26,7 @@ type Settings struct {
 	RedisAddr               string `envconfig:"REDIS_ADDR" required:"true"`
 	RedisPassword           string `envconfig:"REDIS_PASSWORD" required:"true"`
 	PostgresURL             string `envconfig:"DATABASE_URL" required:"true"`
+	StrikeAPIKey            string `envconfig:"STRIKE_API_KEY"`
 	SessionOffsetHashidSalt string `envconfig:"SESSION_OFFSET_HASHID_SALT"`
 	LoggedAs                string `envconfig:"LOGGED_AS"`
 	HerokuToken             string `envconfig:"HEROKU_TOKEN"`
@@ -34,10 +36,11 @@ type Settings struct {
 var err error
 var s Settings
 var b napping.Session
-var pg *igor.Database
+var pg *sqlx.DB
 var acd = accountd.NewClient()
 var hso *hashids.HashID
 var rds *redis.Client
+var log = zerolog.New(os.Stderr)
 var couch *couchdb.DB
 var tracklua string
 var blacklist map[string]bool
@@ -45,8 +48,11 @@ var blacklist map[string]bool
 func main() {
 	err = envconfig.Process("", &s)
 	if err != nil {
-		log.Fatal("couldn't process envconfig: ", err)
+		log.Fatal().Err(err).Msg("couldn't process envconfig")
 	}
+
+	zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	log = log.With().Timestamp().Logger()
 
 	// redis
 	rds = redis.NewClient(&redis.Options{
@@ -54,16 +60,16 @@ func main() {
 		Password: s.RedisPassword,
 	})
 
-	// postgres
-	pg, err = igor.Connect(s.PostgresURL)
+	// postgres connection
+	pg, err = sqlx.Connect("postgres", s.PostgresURL)
 	if err != nil {
-		log.Fatal("couldn't connect to postgres at "+s.PostgresURL+": ", err)
+		log.Fatal().Err(err).Msg("couldn't connect to postgres")
 	}
 
 	// couchdb
 	couchS, err := couchdb.NewClient(s.CouchURL, nil)
 	if err != nil {
-		log.Fatal("failed to created couchdb client: ", err)
+		log.Fatal().Err(err).Msg("failed to created couchdb client")
 	}
 	couch = couchS.DB(s.CouchDatabaseName)
 
@@ -82,7 +88,7 @@ func main() {
 		here := path.Dir(this)
 		btracklua, err = ioutil.ReadFile(filepath.Join(here, filename))
 		if err != nil {
-			log.Fatal("failed to read track.lua: ", err)
+			log.Fatal().Err(err).Msg("failed to read track.lua")
 		}
 	}
 	tracklua = string(btracklua)

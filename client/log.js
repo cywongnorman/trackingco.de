@@ -14,6 +14,7 @@ module.exports = {
 
   error (e) {
     if (e.stack) {
+      console.error(e)
       console.error(e.stack)
       notie.alert({
         text: 'Something wrong has occurred, see the console for the complete error.',

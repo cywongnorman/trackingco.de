@@ -3,13 +3,11 @@ package main
 import (
 	"context"
 	"errors"
-	"log"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/fiatjaf/accountd"
-	"github.com/galeone/igor"
 	"github.com/graphql-go/graphql"
 	"github.com/timjacobi/go-couchdb"
 )
@@ -407,24 +405,9 @@ var coloursType = graphql.NewObject(
 	graphql.ObjectConfig{
 		Name: "Colours",
 		Fields: graphql.Fields{
-			"bar1": &graphql.Field{
-				Type: graphql.String,
-				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-					return p.Source.(igor.JSON)["bar1"], nil
-				},
-			},
-			"line1": &graphql.Field{
-				Type: graphql.String,
-				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-					return p.Source.(igor.JSON)["line1"], nil
-				},
-			},
-			"background": &graphql.Field{
-				Type: graphql.String,
-				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-					return p.Source.(igor.JSON)["background"], nil
-				},
-			},
+			"bar1":       &graphql.Field{Type: graphql.String},
+			"line1":      &graphql.Field{Type: graphql.String},
+			"background": &graphql.Field{Type: graphql.String},
 		},
 	},
 )
@@ -450,23 +433,20 @@ var userType = graphql.NewObject(
 					return userFromContext(p.Context), nil
 				},
 			},
-			"plan": &graphql.Field{
-				Type:        graphql.Float,
-				Description: "the billing plan this user is currently in.",
-			},
 			"sites": &graphql.Field{
 				Type: graphql.NewList(siteType),
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 					var sites []Site
-					err = pg.Raw(`
+					err = pg.Select(&sites, `
 SELECT code, name, owner, to_char(created_at, 'YYYYMMDD') AS created_at, shared
   FROM sites
   INNER JOIN (
     SELECT unnest(sites_order) AS c,
            generate_subscripts(sites_order, 1) as o FROM users
   )t ON c = code
-WHERE owner = ?
-ORDER BY o`, p.Source.(User).Id).Scan(&sites)
+WHERE owner = $1
+ORDER BY o
+                    `, p.Source.(User).Id)
 					if err != nil {
 						return nil, err
 					}
@@ -484,7 +464,38 @@ ORDER BY o`, p.Source.(User).Id).Scan(&sites)
 					}
 				},
 			},
-			"colours": &graphql.Field{Type: coloursType},
+			"colours": &graphql.Field{
+				Type: coloursType,
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					u, ok := p.Source.(User)
+					if !ok {
+						return nil, errors.New("failed to fetch colours")
+					}
+
+					t := make(map[string]interface{})
+					err := (&u.Colours).Unmarshal(&t)
+					return t, err
+				},
+			},
+			"payments": &graphql.Field{
+				Type: graphql.NewList(paymentType),
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					var payments []Payment
+					err = pg.Select(&payments, `
+SELECT
+  id, user_id, created_at, amount,
+  coalesce(paid_at, to_timestamp(0)) AS paid_at,
+  (paid_at IS NOT NULL) AS has_paid
+FROM payments
+WHERE user_id = $1
+ORDER BY created_at DESC
+                    `, p.Source.(User).Id)
+					if err != nil {
+						return nil, err
+					}
+					return payments, nil
+				},
+			},
 		},
 	},
 )
@@ -496,10 +507,10 @@ var rootQuery = graphql.ObjectConfig{
 			Type: userType,
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 				user := User{}
-				err = pg.Model(user).
-					Select("id, array_to_string(domains, ','), colours, plan").
-					Where("id = ?", userFromContext(p.Context)).
-					Scan(&user)
+				err = pg.Get(&user, `
+SELECT id, array_to_string(domains, ',') AS domains, colours
+FROM users WHERE id = $1
+                `, userFromContext(p.Context))
 				if err != nil {
 					return nil, err
 				}
@@ -581,6 +592,35 @@ var resultType = graphql.NewObject(
 	},
 )
 
+var strikeChargeType = graphql.NewObject(
+	graphql.ObjectConfig{
+		Name: "StrikeChargeType",
+		Fields: graphql.Fields{
+			"id":              &graphql.Field{Type: graphql.String},
+			"amount":          &graphql.Field{Type: graphql.Int},
+			"amount_satoshi":  &graphql.Field{Type: graphql.Int},
+			"payment_hash":    &graphql.Field{Type: graphql.String},
+			"payment_request": &graphql.Field{Type: graphql.String},
+			"created":         &graphql.Field{Type: graphql.Int},
+			"description":     &graphql.Field{Type: graphql.String},
+			"paid":            &graphql.Field{Type: graphql.Boolean},
+		},
+	},
+)
+
+var paymentType = graphql.NewObject(
+	graphql.ObjectConfig{
+		Name: "PaymentType",
+		Fields: graphql.Fields{
+			"id":         &graphql.Field{Type: graphql.String},
+			"amount":     &graphql.Field{Type: graphql.Int},
+			"created_at": &graphql.Field{Type: graphql.String},
+			"has_paid":   &graphql.Field{Type: graphql.Boolean},
+			"paid_at":    &graphql.Field{Type: graphql.String},
+		},
+	},
+)
+
 var rootMutation = graphql.ObjectConfig{
 	Name: "Mutation",
 	Fields: graphql.Fields{
@@ -595,37 +635,29 @@ var rootMutation = graphql.ObjectConfig{
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 				user := userFromContext(p.Context)
 				code := makeCodeForUser(user)
-				site := Site{
-					Code:  code,
-					Name:  p.Args["name"].(string),
-					Owner: user,
-				}
-
-				tx := pg.Begin()
 
 				// ensure user account exists
-				if err = ensureUser(tx, user); err != nil {
-					tx.Rollback()
+				if err = ensureUser(user); err != nil {
 					return nil, err
 				}
 
-				if err = tx.Create(&site); err != nil {
-					tx.Rollback()
-					return nil, err
-				}
+				var site Site
+				err = pg.Get(&site, `
+WITH
+ins AS (
+  INSERT INTO sites (code, owner, name)
+  VALUES ($1, $2, $3)
+  RETURNING *
+),
+upd AS (
+  UPDATE users
+  SET sites_order = array_append(sites_order, $1)
+  WHERE id = $2
+)
+SELECT * FROM ins
+                `, code, user, p.Args["name"].(string))
 
-				err = tx.Exec(`
-UPDATE users SET sites_order = array_append(sites_order, ?)
-WHERE id = ?`, site.Code, user)
-				if err != nil {
-					tx.Rollback()
-					return nil, err
-				}
-
-				if err = tx.Commit(); err != nil {
-					return nil, err
-				}
-				return site, nil
+				return site, err
 			},
 		},
 		"renameSite": &graphql.Field{
@@ -641,15 +673,20 @@ WHERE id = ?`, site.Code, user)
 				},
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
-				site, err := fetchSite(p.Args["code"].(string))
+				user := userFromContext(p.Context)
+				code := p.Args["code"].(string)
+				name := p.Args["name"].(string)
+
+				var site Site
+				err := pg.Get(&site, `
+WITH upd AS (
+  UPDATE sites SET name = $2
+  WHERE code = $1 AND owner = $3
+)
+SELECT * FROM sites WHERE code = $1
+                `, code, name, user)
+
 				if err != nil {
-					return nil, err
-				}
-				if site.Owner != userFromContext(p.Context) {
-					return nil, errors.New("you're not authorized to update this site.")
-				}
-				site.Name = p.Args["name"].(string)
-				if err = pg.Updates(&site); err != nil {
 					return nil, err
 				}
 				return site, nil
@@ -667,28 +704,17 @@ WHERE id = ?`, site.Code, user)
 				user := userFromContext(p.Context)
 				code := p.Args["code"].(string)
 
-				tx := pg.Begin()
-
-				err = tx.Exec(
-					`DELETE FROM sites WHERE code = ? AND owner = ?`,
-					code, user,
-				)
+				_, err := pg.Exec(`
+WITH
+del AS (
+  DELETE FROM sites
+  WHERE code = $1 AND owner = $2
+),
+UPDATE users
+SET sites_order = array_remove(sites_order, $1)
+WHERE id = $2
+                `, code, user)
 				if err != nil {
-					tx.Rollback()
-					return Result{false, err.Error()}, err
-				}
-
-				err = tx.Exec(
-					`UPDATE users SET sites_order = array_remove(sites_order, ?) WHERE id = ?`,
-					code, user,
-				)
-				if err != nil {
-					tx.Rollback()
-					return Result{false, err.Error()}, err
-				}
-
-				if err = tx.Commit(); err != nil {
-					tx.Rollback()
 					return Result{false, err.Error()}, err
 				}
 
@@ -711,9 +737,11 @@ WHERE id = ?`, site.Code, user)
 					codes[i] = icode.(string)
 				}
 				order := strings.Join(codes, "@^~^@")
-				err = pg.Exec(
-					`UPDATE users SET sites_order = string_to_array(?, '@^~^@') WHERE id = ?`,
-					order, user)
+				_, err = pg.Exec(`
+UPDATE users
+SET sites_order = string_to_array($1, '@^~^@')
+WHERE id = $2
+                `, order, user)
 				if err != nil {
 					return Result{false, err.Error()}, err
 				}
@@ -736,9 +764,12 @@ WHERE id = ?`, site.Code, user)
 				user := userFromContext(p.Context)
 				code := p.Args["code"].(string)
 				share := p.Args["share"].(bool)
-				err = pg.Exec(
-					`UPDATE sites SET shared = ? WHERE code = ? and owner = ?`,
-					share, code, user)
+
+				_, err = pg.Exec(`
+UPDATE sites
+SET shared = $3
+WHERE code = $1 and owner = $2
+                `, code, user, share)
 				if err != nil {
 					return Result{false, err.Error()}, err
 				}
@@ -771,10 +802,11 @@ WHERE id = ?`, site.Code, user)
 					}
 				}
 
-				err = pg.Exec(
-					`UPDATE users SET domains = array_append(array_remove(domains, ?), ?)
-                    WHERE id = ?`,
-					host, host, user)
+				_, err = pg.Exec(`
+UPDATE users
+SET domains = array_append(array_remove(domains, $2), $2)
+WHERE id = $1
+                `, user, host)
 				if err != nil {
 					return Result{false, err.Error()}, err
 				}
@@ -806,9 +838,11 @@ WHERE id = ?`, site.Code, user)
 					}
 				}
 
-				err = pg.Exec(
-					`UPDATE users SET domains = array_remove(domains, ?) WHERE id = ?`,
-					host, user)
+				_, err = pg.Exec(`
+UPDATE users
+SET domains = array_remove(domains, $2)
+WHERE id = $1
+                `, user, host)
 				if err != nil {
 					return Result{false, err.Error()}, err
 				}
@@ -825,15 +859,13 @@ WHERE id = ?`, site.Code, user)
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 				user := userFromContext(p.Context)
-				colours := make(igor.JSON)
+				colours := p.Args["colours"].(map[string]interface{})
 
-				for field, colour := range p.Args["colours"].(map[string]interface{}) {
-					colours[field] = colour
-				}
-
-				err = pg.Exec(
-					`UPDATE users SET colours = ?
-                    WHERE id = ?`, colours, user)
+				_, err = pg.Exec(`
+UPDATE users
+SET colours = $1
+WHERE id = $2
+                `, colours, user)
 				if err != nil {
 					return Result{false, err.Error()}, err
 				}
@@ -841,37 +873,28 @@ WHERE id = ?`, site.Code, user)
 				return Result{true, ""}, nil
 			},
 		},
-		"setPlan": &graphql.Field{
-			Type: resultType,
+		"createCharge": &graphql.Field{
+			Type: strikeChargeType,
 			Args: graphql.FieldConfigArgument{
-				"plan": &graphql.ArgumentConfig{
-					Type:        graphql.Float,
-					Description: "a plan number.",
+				"amount": &graphql.ArgumentConfig{
+					Type:        graphql.Int,
+					Description: "Amount in satoshis",
 				},
 			},
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 				user := userFromContext(p.Context)
-				plan := p.Args["plan"].(float64)
-
-				// set user plan
-				if err = pg.Exec(
-					`UPDATE users SET plan = ? WHERE  user= ?`,
-					plan, user); err != nil {
-
-					return Result{false, err.Error()}, err
-				}
-
-				return Result{true, ""}, nil
+				amount := p.Args["amount"].(int)
+				return createCharge(user, amount)
 			},
 		},
 	},
 }
 
 func fetchSite(code string) (site Site, err error) {
-	err = pg.Model(site).
-		Select("code, name, owner, to_char(created_at, 'YYYYMMDD') AS created_at, shared").
-		Where("code = ?", code).
-		Scan(&site)
+	err = pg.Get(&site, `
+SELECT code, name, owner, to_char(created_at, 'YYYYMMDD') AS created_at, shared
+FROM SITES WHERE code = $1
+    `, code)
 	return site, err
 }
 
@@ -882,11 +905,11 @@ func userFromContext(ctx context.Context) string {
 	return ""
 }
 
-func ensureUser(pg *igor.Database, user string) (err error) {
-	if err = pg.Exec(`
+func ensureUser(user string) (err error) {
+	if _, err = pg.Exec(`
 INSERT INTO users
 (id, sites_order, colours)
-VALUES (?, '{}'::text[], '{}')
+VALUES ($1, '{}'::text[], '{}')
 ON CONFLICT (id) DO NOTHING
   `, user); err != nil {
 		return err
@@ -906,7 +929,7 @@ func rewriteAccounts(user string) (n int, err error) {
 	}
 
 	for _, acc := range look.Accounts {
-		err = pg.Exec(`
+		_, err = pg.Exec(`
 WITH su AS (
   UPDATE sites SET owner = $1 WHERE owner = $2
 )

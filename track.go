@@ -1,16 +1,15 @@
 package main
 
 import (
-	"log"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/qiangxue/fasthttp-routing"
+	"github.com/valyala/fasthttp"
 )
 
-func track(c *routing.Context) error {
+func track(c *fasthttp.RequestCtx) {
 	// cors
 	c.Response.Header.Add("Vary", "Origin")
 
@@ -26,19 +25,25 @@ func track(c *routing.Context) error {
 	c.Response.Header.Add("Pragma", "no-cache")
 	c.Response.Header.Add("Expires", "0")
 
+	logger := log.With().Logger()
+
 	// tracking code
 	code := string(c.FormValue("c"))
 	if code == "" {
-		return HTTPError{400, "didn't send tracking code."}
+		logger.Warn().Msg("didn't send tracking code")
+		c.Error("didn't send tracking code.", 400)
+		return
 	}
+
+	logger = logger.With().Str("code", code).Logger()
 
 	// page
 	upage, err := url.Parse(string(c.Referer()))
 	if err != nil {
-		return HTTPError{
-			400,
-			"invalid Referer: " + string(c.Referer()) + " - " + err.Error(),
-		}
+		logger.Warn().Err(err).Str("ref", string(c.Referer())).
+			Msg("invalid referer")
+		c.Error("invalid Referer: "+string(c.Referer())+" - "+err.Error(), 400)
+		return
 	}
 	page := strings.TrimRight(upage.Path, "/")
 	if page == "" {
@@ -47,6 +52,8 @@ func track(c *routing.Context) error {
 	if upage.RawQuery != "" {
 		page = page + "?" + upage.RawQuery
 	}
+
+	logger = logger.With().Str("page", page).Logger()
 
 	// points
 	points, err := strconv.Atoi(string(c.FormValue("p")))
@@ -62,6 +69,8 @@ func track(c *routing.Context) error {
 		page = ""
 	}
 
+	logger = logger.With().Int("points", points).Logger()
+
 	// referrer
 	referrer := string(c.FormValue("r")) // may be "". means <direct>.
 	if referrer != "" {
@@ -69,15 +78,17 @@ func track(c *routing.Context) error {
 		if err == nil {
 			// verify if referrer is on blacklist
 			if _, blacklisted := blacklist[uref.Host]; blacklisted {
-				log.Print("referrer on blacklist: ", uref.Host)
+				log.Info().Str("ref", uref.Host).Msg("referrer on blacklist")
 
 				// send fake/invalid hashid to spammer
 				if hi, err := hso.Encode([]int{-1, randomNumber(999), randomNumber(99), 37}); err == nil {
 					c.SetStatusCode(200)
 					c.SetBody([]byte(hi))
-					return nil
+					return
 				} else {
-					return HTTPError{500, "error encoding fake hashid: " + err.Error()}
+					logger.Warn().Err(err).Msg("error encoding fake hashid")
+					c.Error("error encoding fake hashid: "+err.Error(), 500)
+					return
 				}
 			}
 
@@ -89,10 +100,14 @@ func track(c *routing.Context) error {
 		}
 	}
 
+	logger = logger.With().Str("ref", referrer).Logger()
+
 	// session (a hashid that translates to a number, which is the offset for the array of points)
 	var offset int
 	var sessioncode int
-	hi := c.Param("sessionhashid")
+	hi := c.UserValue("sessionhashid").(string)
+
+	logger = logger.With().Str("session", hi).Logger()
 
 	// try to decode (at first it should be an invalid string)
 	if offsetarr, err := hso.DecodeWithError(hi); err == nil && len(offsetarr) == 2 {
@@ -108,6 +123,8 @@ func track(c *routing.Context) error {
 		sessioncode = randomNumber(999999999)
 		rds.Set("rs:"+strconv.Itoa(sessioncode), referrer, time.Hour*5)
 	}
+
+	logger = logger.With().Int("offset", offset).Logger()
 
 	// store data to redis
 	twodays := int(time.Hour * 48)
@@ -127,7 +144,8 @@ func track(c *routing.Context) error {
 	)
 
 	if val, err := result.Result(); err != nil {
-		return HTTPError{500, "error executing track.lua: " + err.Error()}
+		logger.Warn().Err(err).Msg("error executing track.lua")
+		c.Error("error executing track.lua: "+err.Error(), 500)
 	} else {
 		offset = int(val.(int64))
 	}
@@ -135,14 +153,16 @@ func track(c *routing.Context) error {
 	// send session to user
 	hi, err = hso.Encode([]int{offset, sessioncode})
 	if err != nil {
-		return HTTPError{
+		logger.Warn().Err(err).Msg("error encoding hashid for session offset")
+		c.Error(
+			"error encoding hashid for session offset "+string(offset)+": "+
+				err.Error(),
 			500,
-			"error encoding hashid for session offset " + string(offset) + ": " + err.Error(),
-		}
+		)
+		return
 	}
 	c.SetStatusCode(200)
 	c.SetBody([]byte(hi))
 
-	log.Print("tracked ", code, " ", referrer, " ", hi, " ", offset, " ", page)
-	return nil
+	logger.Info().Msg("tracked")
 }

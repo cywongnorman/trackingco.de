@@ -5,6 +5,7 @@ const TwitterPicker = require('react-color').TwitterPicker
 const randomColor = require('randomcolor')
 const DocumentTitle = require('react-document-title')
 const BodyStyle = require('body-style')
+const QRious = require('qrious')
 
 const log = require('./log')
 const graphql = require('./graphql')
@@ -13,19 +14,12 @@ const coloursfragment = require('./helpers').coloursfragment
 const title = require('./helpers').title
 const onLoggedStateChange = require('./auth').onLoggedStateChange
 
-const plans = [
-  {name: 'Free', code: 0},
-  {name: 'First', code: 1},
-  {name: 'Second', code: 2},
-  {name: 'Third', code: 3}
-]
-
 const UserAccount = React.createClass({
   getInitialState () {
     return {
       me: null,
       newDomain: '',
-      willPay: 12
+      activeCharge: null
     }
   },
 
@@ -36,7 +30,13 @@ query {
     colours { ...${coloursfragment} }
     domains
     id
-    plan
+    payments {
+      id
+      created_at
+      amount
+      paid_at
+      has_paid
+    }
   }
 }
     `)
@@ -73,33 +73,29 @@ query {
                         h('.card-header-title', 'Registered domains')
                       ]),
                       h('.card-content', [
-                        this.state.me.plan < 2
-                          ? h('p', 'Please upgrade your account to gain access to this feature.')
-                          : (
-                            h('ul', this.state.me.domains.map(hostname =>
-                              h('li', {key: hostname}, [
-                                hostname + ' ',
-                                h('a.delete', {onClick: e => { this.removeDomain(e, hostname) }})
+                        h('ul', this.state.me.domains.map(hostname =>
+                          h('li', {key: hostname}, [
+                            hostname + ' ',
+                            h('a.delete', {onClick: e => { this.removeDomain(e, hostname) }})
+                          ])
+                        ).concat(
+                          h('form', {key: '~', onSubmit: this.addDomain}, [
+                            h('p.control.has-icon', [
+                              h('input.input', {
+                                type: 'text',
+                                onChange: e => { this.setState({newDomain: e.target.value}) },
+                                value: this.state.newDomain,
+                                placeholder: 'Add a domain or subdomain'
+                              }),
+                              h('span.icon.is-small', [
+                                h('i.fa.fa-plus')
                               ])
-                            ).concat(
-                              h('form', {key: '~', onSubmit: this.addDomain}, [
-                                h('p.control.has-icon', [
-                                  h('input.input', {
-                                    type: 'text',
-                                    onChange: e => { this.setState({newDomain: e.target.value}) },
-                                    value: this.state.newDomain,
-                                    placeholder: 'Add a domain or subdomain'
-                                  }),
-                                  h('span.icon.is-small', [
-                                    h('i.fa.fa-plus')
-                                  ])
-                                ]),
-                                h('p.control', [
-                                  h('button.button', 'Save')
-                                ])
-                              ])
-                            ))
-                          )
+                            ]),
+                            h('p.control', [
+                              h('button.button', 'Save')
+                            ])
+                          ])
+                        ))
                       ])
                     ])
                   ])
@@ -113,12 +109,10 @@ query {
                         h('.card-header-title', 'Interface colours')
                       ]),
                       h('.card-content', [
-                        this.state.me.plan < 1
-                          ? h('p', 'Please upgrade your account to gain access to this feature.')
-                          : h(Colours, {
-                            ...this.state,
-                            onColour: this.changeColour
-                          })
+                        h(Colours, {
+                          ...this.state,
+                          onColour: this.changeColour
+                        })
                       ])
                     ])
                   ])
@@ -130,8 +124,7 @@ query {
                         h('.card-header-title', 'Account information')
                       ]),
                       h('.card-content', [
-                        h('p', `user: ${this.state.me.id}`),
-                        h('p', `plan: ${plans[this.state.me.plan].name}`)
+                        h('p', `user: ${this.state.me.id}`)
                       ])
                     ])
                   ])
@@ -142,37 +135,52 @@ query {
               h('.tile.is-4', [
                 h('.tile.is-parent', [
                   h('.tile.is-child', [
-                    h('.card.account-plan', [
+                    h('.card.account-payments', [
                       h('.card-header', [
-                        h('.card-header-title', 'Your plan')
+                        h('.card-header-title', 'Your payments')
                       ]),
                       h('.card-content', [
-                        h('h2.title.is-2', `${plans[this.state.me.plan].name} Plan`),
-                        this.state.me.plan >= (plans.length - 1)
-                          ? h('p', 'Contact us if you want a bigger plan.')
-                          : h('div', [
-                            h('h3.title.is-3', 'Upgrade to:'),
-                            h('ul', plans.slice(this.state.me.plan + 1).map(({name, code}) =>
-                              h('li', [
-                                h('button.button.is-large.is-warning', {
-                                  onClick: e => this.setPlan(code, e)
-                                }, `${name} Plan`)
-                              ])
-                            ))
-                          ]),
+                        h('h2.title.is-2', 'Payments'),
+                        h('table.table', [
+                          h('tbody', this.state.me.payments.map(p =>
+                            h('tr', [
+                              h('td', p.id),
+                              h('td', p.created_at),
+                              h('td', `${p.amount} satoshis`),
+                              h('td', p.has_paid ? `paid at ${p.paid_at}` : 'not paid')
+                            ])
+                          ))
+                        ]),
                         h('hr'),
-                        this.state.me.plan === 0
-                          ? 'You have no guarantees in the Free Plan, all your data can be erased at any time.'
-                          : h('div', [
-                            h('h6.title.is-6', 'Downgrade to:'),
-                            h('ul', plans.slice(0, this.state.me.plan).map(({name, code}) =>
-                              h('li', [
-                                h('button.button.is-small.is-light', {
-                                  onClick: e => this.setPlan(code, e)
-                                }, `${name} Plan`)
-                              ])
-                            ))
-                          ])
+                        this.state.activeCharge
+                          ? (
+                            h('.charge', {
+                              title: 'Use this code in your LN-enabled wallet.'
+                            }, [
+                              h('h3.title.is-3',
+                                `${this.state.activeCharge.amount * 0.00000001} BTC`
+                              ),
+                              h('canvas', {
+                                ref: el => {
+                                  if (!el) return
+                                  new QRious({
+                                    element: el,
+                                    value: this.state.activeCharge.payment_request,
+                                    size: 250
+                                  })
+                                }
+                              }),
+                              this.state.activeCharge.payment_request
+                            ])
+                          )
+                          : (
+                            h('div', [
+                              h('h4.title.is-4', 'Pay now'),
+                              h('button.button', {
+                                onClick: this.createCharge.bind(this, 100)
+                              }, 'Pay 100 satoshi (1 bit)')
+                            ])
+                          )
                       ])
                     ])
                   ])
@@ -187,24 +195,26 @@ query {
     )
   },
 
-  setPlan (code, e) {
+  createCharge (amount, e) {
     e.preventDefault()
     window.tc && window.tc(4)
 
     graphql.mutate(`
-($code: Float!) {
-  setPlan(plan: $code) {
-    ok, error
+($amount: Int!) {
+  createCharge(amount: $amount) {
+    payment_request
+    payment_hash
+    amount
+    id
+    created
+    description
+    paid
   }
 }
-    `, {code})
+    `, {amount})
     .then(r => {
-      if (!r.setPlan.ok) {
-        log.error('failed to setPlan:', r.setPlan.error)
-        return
-      }
       this.setState(st => {
-        st.me.plan = code
+        st.activeCharge = r.createCharge
         return st
       })
     })

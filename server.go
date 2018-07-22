@@ -3,30 +3,39 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"strings"
 
-	"github.com/qiangxue/fasthttp-routing"
 	"github.com/valyala/fasthttp"
 )
 
 func runServer() {
-	router := routing.New()
-	router.Get("/", func(c *routing.Context) error {
+	log.Print("listening at :" + s.Port)
+	panic(fasthttp.ListenAndServe(":"+s.Port, fastHTTPHandler))
+}
+
+func fastHTTPHandler(c *fasthttp.RequestCtx) {
+	path := string(c.Path())
+	log.Debug().Str("path", path).Msg("got request")
+
+	dotspl := strings.Split(path, ".")
+	if len(dotspl) == 2 && dotspl[1] == "xml" {
+		hashid := dotspl[0][1:]
+		c.SetUserValue("sessionhashid", hashid)
+		track(c)
+		return
+	}
+
+	spl := strings.Split(path, "/")
+	if len(spl) == 3 && (spl[1] == "sites" || spl[1] == "public") {
+		serveClient(c)
+		return
+	}
+
+	switch path {
+	case "/":
 		c.SendFile("client/landing.html")
-		return nil
-	})
-
-	router.Get("/favicon.ico", func(c *routing.Context) error {
-		c.SendFile("client/logo.png")
-		return nil
-	})
-	router.Get("/sites", serveClient)
-	router.Get("/account", serveClient)
-	router.Get("/sites/<code>", serveClient)
-	router.Get("/public/<code>", serveClient)
-
-	router.Post("/_graphql", func(c *routing.Context) error {
-		user := extractUserFromJWT(c.RequestCtx)
+	case "/_graphql":
+		user := extractUserFromJWT(c)
 		if user == "" {
 			user = s.LoggedAs
 			log.Print("forced auth as ", user)
@@ -38,45 +47,31 @@ func runServer() {
 
 		var gqr GraphQLRequest
 		if err = json.Unmarshal(c.Request.Body(), &gqr); err != nil {
-			return HTTPError{400, "failed to read graphql request: " + err.Error()}
+			c.Error("failed to read graphql request: "+err.Error(), 400)
+			return
 		}
 		result := query(gqr, context)
 		if jsonresult, err := json.Marshal(result); err != nil {
-			return HTTPError{500, "failed to marshal graphql response: " + err.Error()}
+			c.Error("failed to marshal graphql response: "+err.Error(), 500)
+			return
 		} else {
 			c.SetContentType("application/json")
 			c.SetBody(jsonresult)
 		}
 		context.Done()
-		return nil
-	})
-
-	fsHandler := fasthttp.FSHandler(".", 0)
-	router.Get("/client/*", func(c *routing.Context) error {
-		fsHandler(c.RequestCtx)
-		return nil
-	})
-
-	router.Get("/<sessionhashid:[0-9a-zA-Z-~^]+>.xml", track)
-
-	log.Print("listening at :" + s.Port)
-	panic(fasthttp.ListenAndServe(":"+s.Port, router.HandleRequest))
+	case "/_/webhooks/strike":
+		handleStrikeWebhook(c)
+	case "/favicon.ico":
+		c.SendFile("client/logo.png")
+	case "/sites", "/account":
+		serveClient(c)
+	default:
+		fasthttp.FSHandler(".", 0)(c)
+	}
 }
 
-func serveClient(c *routing.Context) error {
+func serveClient(c *fasthttp.RequestCtx) {
 	c.SendFile("client/index.html")
-	return nil
-}
-
-type HTTPError struct {
-	status  int
-	message string
-}
-
-func (h HTTPError) StatusCode() int { return h.status }
-func (h HTTPError) Error() string {
-	log.Print(h.message)
-	return h.message
 }
 
 func extractUserFromJWT(ctx *fasthttp.RequestCtx) string {

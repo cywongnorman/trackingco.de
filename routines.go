@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"sort"
 	"time"
 
@@ -51,9 +50,9 @@ func monthly() {
 func compileDayStats(day string) {
 	log.Print("-- running compileDayStats routine for ", day, ".")
 
-	sites, err := fetchPayingSites()
+	sites, err := fetchSites()
 	if err != nil {
-		log.Fatal("error fetching list of sites from postgres: ", err)
+		log.Fatal().Err(err).Msg("error fetching list of sites from postgres")
 	}
 
 	for _, site := range sites {
@@ -82,9 +81,9 @@ func compileDayStats(day string) {
 func compileMonthStats(month string) {
 	log.Print("-- running compileMonthStats routine for ", month, ".")
 
-	sites, err := fetchPayingSites()
+	sites, err := fetchSites()
 	if err != nil {
-		log.Fatal("error fetching list of sites from postgres: ", err)
+		log.Fatal().Err(err).Msg("error fetching list of sites from postgres")
 	}
 
 	for _, site := range sites {
@@ -167,12 +166,8 @@ func compileMonthStats(month string) {
 	}
 }
 
-func fetchPayingSites() (sites []Site, err error) {
-	err = pg.Raw(`
-SELECT sites.* FROM sites
-INNER JOIN users ON users.id = sites.owner
-WHERE plan > 0`).
-		Scan(&sites)
+func fetchSites() (sites []Site, err error) {
+	err = pg.Select(&sites, `SELECT * FROM sites`)
 	return sites, err
 }
 
@@ -180,7 +175,7 @@ func deleteOlderDayStats() {
 	today := presentDay()
 	a100daysago := today.AddDate(0, 0, -100)
 	a130daysago := today.AddDate(0, 0, -130)
-	sites, err := fetchPayingSites()
+	sites, err := fetchSites()
 
 	if err != nil {
 		log.Print("error fetching all sites for deleting older day stats: ", err)

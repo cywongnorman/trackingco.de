@@ -3,7 +3,7 @@ package main
 import (
 	"strings"
 
-	"github.com/galeone/igor"
+	"github.com/jmoiron/sqlx/types"
 )
 
 type Day struct {
@@ -75,45 +75,37 @@ type SessionGroup struct {
 }
 
 type User struct {
-	Id      string    `json:"id" igor:"primary_key"`
-	Domains string    `json:"domains"` // actually an array of domains comma-separated.
-	Colours igor.JSON `json:"colours"`
-	Plan    float64   `json:"plan"`
-
-	SitesOrder []string `json:"-" sql:"-"`
-
-	Sites          []Site         `json:"sites" sql:"-"`
-	BillingHistory []BillingEntry `json:"billingHistory" sql:"-"`
+	Id      string         `json:"id" db:"id"`
+	Domains string         `json:"domains" db:"domains"` // array, comma-separated.
+	Colours types.JSONText `json:"colours" db:"colours"`
 }
 
-func (_ User) TableName() string { return "users" }
-
-type BillingEntry struct {
-	Id    int     `json:"id" igor:"primary_key"`
-	Time  string  `json:"time"`
-	Delta float64 `json:"delta"`
-	Due   string  `json:"due"`
+type Payment struct {
+	Id        string `json:"id" db:"id"`
+	UserId    string `json:"user_id" db:"user_id"`
+	Amount    int    `json:"amount" db:"amount"`
+	CreatedAt string `json:"created_at" db:"created_at"`
+	HasPaid   bool   `json:"has_paid" db:"has_paid"`
+	PaidAt    string `json:"paid_at" db:"paid_at"`
 }
 
 type Site struct {
-	Code      string `json:"code,omitempty" igor:"primary_key"`
-	Name      string `json:"name,omitempty"`
-	Owner     string `json:"owner,omitempty"`
-	CreatedAt string `json:"created_at,omitempty"`
-	Shared    bool   `json:"shared,omitempty"`
+	Code      string `json:"code,omitempty" db:"code"`
+	Name      string `json:"name,omitempty" db:"name"`
+	Owner     string `json:"owner,omitempty" db:"owner"`
+	CreatedAt string `json:"created_at,omitempty" db:"created_at"`
+	Shared    bool   `json:"shared,omitempty" db:"shared"`
 
 	lastDays    int
 	usingMonths bool
 	couchDays   []Day
 	couchMonths []Month
 
-	ShareURL string  `json:"shareURL,omitempty" sql:"-"`
-	Days     []Day   `json:"days,omitempty" sql:"-"`
-	Months   []Month `json:"months,omitempty" sql:"-"`
-	Today    Day     `json:"today,omitempty" sql:"-"`
+	ShareURL string  `json:"shareURL,omitempty"`
+	Days     []Day   `json:"days,omitempty"`
+	Months   []Month `json:"months,omitempty"`
+	Today    Day     `json:"today,omitempty"`
 }
-
-func (_ Site) TableName() string { return "sites" }
 
 type CouchDBDayResults struct {
 	Rows []struct {
