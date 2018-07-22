@@ -25,8 +25,15 @@ const Dashboard = React.createClass({
     graphql.query(`
 query {
   me {
-    sites {
+    sites (last: 7) {
+      name
       code
+      shareURL
+      days {
+        day
+        s
+        v
+      }
     }
     colours { background }
   }
@@ -60,7 +67,7 @@ query {
               key: site.code
             }, [
               h(SiteCard, {
-                code: site.code,
+                site,
                 index: i,
                 moveSite: this.moveSite,
                 saveSiteOrder: this.saveSiteOrder,
