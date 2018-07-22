@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"sort"
 	"strings"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/fiatjaf/accountd"
 	"github.com/graphql-go/graphql"
+	"github.com/jmoiron/sqlx/types"
 	"github.com/timjacobi/go-couchdb"
 )
 
@@ -866,11 +868,22 @@ WHERE id = $1
 				user := userFromContext(p.Context)
 				colours := p.Args["colours"].(map[string]interface{})
 
+				x, err := json.Marshal(colours)
+				if err != nil {
+					return Result{false, err.Error()}, err
+				}
+
+				var coloursjson types.JSONText
+				err = coloursjson.UnmarshalJSON(x)
+				if err != nil {
+					return Result{false, err.Error()}, err
+				}
+
 				_, err = pg.Exec(`
 UPDATE users
 SET colours = $1
 WHERE id = $2
-                `, colours, user)
+                `, coloursjson, user)
 				if err != nil {
 					return Result{false, err.Error()}, err
 				}

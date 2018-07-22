@@ -15,7 +15,6 @@ func runServer() {
 
 func fastHTTPHandler(c *fasthttp.RequestCtx) {
 	path := string(c.Path())
-	log.Debug().Str("path", path).Msg("got request")
 
 	dotspl := strings.Split(path, ".")
 	if len(dotspl) == 2 && dotspl[1] == "xml" {
