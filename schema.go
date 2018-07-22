@@ -728,7 +728,7 @@ WITH
 del AS (
   DELETE FROM sites
   WHERE code = $1 AND owner = $2
-),
+)
 UPDATE users
 SET sites_order = array_remove(sites_order, $1)
 WHERE id = $2
