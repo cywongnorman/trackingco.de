@@ -130,8 +130,13 @@ nav.nav {
 .card.account-domains li:not(:last-child) { margin-bottom: 5px; }
 
 .card.account-payments {}
+.card.account-payments .pay {
+  text-align: center;
+  margin: 32px;
+}
 .card.account-payments .charge {
   font-family: monospace;
+  font-size: 110%;
   white-space: pre-wrap;
   word-break: break-all;
 }

@@ -78,6 +78,7 @@ type User struct {
 	Id      string         `json:"id" db:"id"`
 	Domains string         `json:"domains" db:"domains"` // array, comma-separated.
 	Colours types.JSONText `json:"colours" db:"colours"`
+	NMonths int            `json:"nmonths" db:"nmonths"`
 }
 
 type Payment struct {

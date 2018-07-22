@@ -30,6 +30,7 @@ query {
     colours { ...${coloursfragment} }
     domains
     id
+    nmonths
     payments {
       id
       created_at
@@ -59,6 +60,11 @@ query {
     }
 
     let backgroundColor = mergeColours(this.state.me.colours).background
+    let paid = this.state.me.payments
+      .filter(p => p.has_paid)
+      .map(p => p.amount)
+      .reduce((a, b) => a + b)
+    let due = this.state.me.nmonths * 50000
 
     return (
       h(DocumentTitle, {title: title('User account')}, [
@@ -124,7 +130,13 @@ query {
                         h('.card-header-title', 'Account information')
                       ]),
                       h('.card-content', [
-                        h('p', `user: ${this.state.me.id}`)
+                        h('p', `user id: ${this.state.me.id}`),
+                        h('p', `usage: ${this.state.me.nmonths} of active usage`),
+                        h('p', `total billed: ${due} satoshis`),
+                        h('p', `total paid: ${paid} satoshis`),
+                        due - paid >= 0
+                          ? h('p', `outstanding balance: ${due - paid} satoshis`)
+                          : h('p', `credit balance: ${paid - due} satoshis`)
                       ])
                     ])
                   ])
@@ -154,19 +166,19 @@ query {
                         h('hr'),
                         this.state.activeCharge
                           ? (
-                            h('.charge', {
-                              title: 'Use this code in your LN-enabled wallet.'
-                            }, [
-                              h('h3.title.is-3',
-                                `${this.state.activeCharge.amount * 0.00000001} BTC`
-                              ),
+                            h('.charge', [
+                              h('h3.title.is-3', {
+                                title: 'Use this code in your LN-enabled wallet.'
+                              }, `${
+                                this.state.activeCharge.amount * 0.00000001
+                              } BTC`),
                               h('canvas', {
                                 ref: el => {
                                   if (!el) return
                                   new QRious({
                                     element: el,
                                     value: this.state.activeCharge.payment_request,
-                                    size: 250
+                                    size: 360
                                   })
                                 }
                               }),
@@ -174,11 +186,21 @@ query {
                             ])
                           )
                           : (
-                            h('div', [
+                            h('.pay', [
                               h('h4.title.is-4', 'Pay now'),
-                              h('button.button', {
-                                onClick: this.createCharge.bind(this, 100)
-                              }, 'Pay 100 satoshi (1 bit)')
+                              (due - paid) > 0
+                                ? (
+                                  h('button.button.is-large.is-info', {
+                                    onClick: this.createCharge.bind(this, due - paid)
+                                  }, `Pay outstanding balance (${
+                                    (due - paid) / 100
+                                  } bits)`)
+                                )
+                                : (
+                                  h('button.button.is-large.is-info', {
+                                    onClick: this.createCharge.bind(this, 50000)
+                                  }, 'Pay 50,000 satoshi (500 bits)')
+                                )
                             ])
                           )
                       ])

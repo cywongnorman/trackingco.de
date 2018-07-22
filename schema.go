@@ -464,6 +464,7 @@ ORDER BY o
 					}
 				},
 			},
+			"nmonths": &graphql.Field{Type: graphql.Int},
 			"colours": &graphql.Field{
 				Type: coloursType,
 				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
@@ -508,7 +509,11 @@ var rootQuery = graphql.ObjectConfig{
 			Resolve: func(p graphql.ResolveParams) (interface{}, error) {
 				user := User{}
 				err = pg.Get(&user, `
-SELECT id, array_to_string(domains, ',') AS domains, colours
+SELECT
+  id,
+  array_to_string(domains, ',') AS domains,
+  colours, 
+  cardinality(months_using) AS nmonths
 FROM users WHERE id = $1
                 `, userFromContext(p.Context))
 				if err != nil {
