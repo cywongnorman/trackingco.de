@@ -127,6 +127,11 @@ nav.nav {
   z-index: 12;
 }
 
+
+.card.account-info {}
+.card.account-info table td,
+.card.account-info table th, { vertical-align: middle; }
+
 .card.account-domains li:not(:last-child) { margin-bottom: 5px; }
 
 .card.account-payments {}

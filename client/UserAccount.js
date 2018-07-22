@@ -130,13 +130,33 @@ query {
                         h('.card-header-title', 'Account information')
                       ]),
                       h('.card-content', [
-                        h('p', `user id: ${this.state.me.id}`),
-                        h('p', `usage: ${this.state.me.nmonths} of active usage`),
-                        h('p', `total billed: ${due} satoshis`),
-                        h('p', `total paid: ${paid} satoshis`),
-                        due - paid >= 0
-                          ? h('p', `outstanding balance: ${due - paid} satoshis`)
-                          : h('p', `credit balance: ${paid - due} satoshis`)
+                        h('table.table', [
+                          h('tbody', [
+                            h('tr', [
+                              h('th', 'user id:'),
+                              h('td', this.state.me.id)
+                            ]),
+                            h('tr', [
+                              h('th', 'usage:'),
+                              h('td', `${this.state.me.nmonths} months of active usage`)
+                            ]),
+                            h('tr', [
+                              h('th', 'total billed:'),
+                              h('td', `${due} satoshis`)
+                            ]),
+                            h('tr', [
+                              h('th', 'total paid:'),
+                              h('td', `${paid} satoshis`)
+                            ]),
+                            h('tr', [
+                              h('th', `${due - paid >= 0
+                                ? 'outstanding'
+                                : 'credit'
+                              } balance:`),
+                              h('td', `${Math.abs(due - paid)} satoshis`)
+                            ])
+                          ])
+                        ])
                       ])
                     ])
                   ])
