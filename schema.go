@@ -200,18 +200,10 @@ var siteType = graphql.NewObject(
 					// do we need to fetch the day list from couchdb?
 					if site.lastDays > 0 && site.lastDays <= 90 {
 						// yes.
-						res := CouchDBDayResults{}
-						today := presentDay()
-						startday := today.AddDate(0, 0, -site.lastDays)
-						err = couch.AllDocs(&res, couchdb.Options{
-							"startkey":     makeBaseKey(site.Code, startday.Format(DATEFORMAT)),
-							"endkey":       makeBaseKey(site.Code, today.Format(DATEFORMAT)),
-							"include_docs": true,
-						})
+						err = fetchDays(&site)
 						if err != nil {
 							return nil, err
 						}
-						site.couchDays = res.toDayList()
 					}
 
 					// fill in missing days with zeroes
@@ -241,19 +233,11 @@ var siteType = graphql.NewObject(
 
 					// do we need to fetch the month list from couchdb?
 					if site.lastDays > 90 {
-						res := CouchDBMonthResults{}
-						today := presentDay()
-						startday := today.AddDate(0, 0, -site.lastDays)
-						err = couch.AllDocs(&res, couchdb.Options{
-							"startkey":     makeMonthKey(site.Code, startday.Format(MONTHFORMAT)),
-							"endkey":       makeMonthKey(site.Code, today.Format(MONTHFORMAT)),
-							"include_docs": true,
-						})
+						// yes.
+						err = fetchMonths(&site)
 						if err != nil {
 							return nil, err
 						}
-						site.couchMonths = res.toMonthList()
-						site.usingMonths = true
 					}
 
 					months := make([]Month, 0, len(site.couchMonths))
@@ -290,7 +274,11 @@ var siteType = graphql.NewObject(
 					site := p.Source.(Site)
 					all := make(map[string]int)
 
-					if site.usingMonths {
+					if site.lastDays > 90 {
+						err = fetchMonths(&site)
+						if err != nil {
+							return nil, err
+						}
 						for _, month := range site.couchMonths {
 							for ref, count := range month.TopReferrers {
 								if prevcount, exists := all[ref]; exists {
@@ -301,6 +289,10 @@ var siteType = graphql.NewObject(
 							}
 						}
 					} else {
+						err = fetchDays(&site)
+						if err != nil {
+							return nil, err
+						}
 						for _, day := range site.couchDays {
 							for ref, scoremap := range day.Sessions {
 								count := (len(scoremap) - 1) / 2
@@ -326,7 +318,11 @@ var siteType = graphql.NewObject(
 					site := p.Source.(Site)
 					all := make(map[string]int)
 
-					if site.usingMonths {
+					if site.lastDays > 90 {
+						err = fetchMonths(&site)
+						if err != nil {
+							return nil, err
+						}
 						for _, month := range site.couchMonths {
 							for ref, count := range month.TopPages {
 								if prevcount, exists := all[ref]; exists {
@@ -337,7 +333,11 @@ var siteType = graphql.NewObject(
 							}
 						}
 					} else {
-						for _, day := range p.Source.(Site).couchDays {
+						err = fetchDays(&site)
+						if err != nil {
+							return nil, err
+						}
+						for _, day := range site.couchDays {
 							for addr, count := range day.Pages {
 								if prevcount, exists := all[addr]; exists {
 									all[addr] = prevcount + count
@@ -972,4 +972,36 @@ UPDATE users SET id = $1 WHERE id = $2
 	}
 
 	return
+}
+
+func fetchDays(site *Site) error {
+	res := CouchDBDayResults{}
+	today := presentDay()
+	startday := today.AddDate(0, 0, -site.lastDays)
+	err = couch.AllDocs(&res, couchdb.Options{
+		"startkey":     makeBaseKey(site.Code, startday.Format(DATEFORMAT)),
+		"endkey":       makeBaseKey(site.Code, today.Format(DATEFORMAT)),
+		"include_docs": true,
+	})
+	if err != nil {
+		return err
+	}
+	site.couchDays = res.toDayList()
+	return nil
+}
+
+func fetchMonths(site *Site) error {
+	res := CouchDBMonthResults{}
+	today := presentDay()
+	startday := today.AddDate(0, 0, -site.lastDays)
+	err = couch.AllDocs(&res, couchdb.Options{
+		"startkey":     makeMonthKey(site.Code, startday.Format(MONTHFORMAT)),
+		"endkey":       makeMonthKey(site.Code, today.Format(MONTHFORMAT)),
+		"include_docs": true,
+	})
+	if err != nil {
+		return err
+	}
+	site.couchMonths = res.toMonthList()
+	return nil
 }

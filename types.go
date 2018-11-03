@@ -98,7 +98,6 @@ type Site struct {
 	Shared    bool   `json:"shared,omitempty" db:"shared"`
 
 	lastDays    int
-	usingMonths bool
 	couchDays   []Day
 	couchMonths []Month
 
