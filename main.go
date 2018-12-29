@@ -1,47 +1,32 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
-	"path"
-	"path/filepath"
-	"runtime"
 
-	"github.com/fiatjaf/accountd"
 	"github.com/jmoiron/sqlx"
 	"github.com/kelseyhightower/envconfig"
 	_ "github.com/lib/pq"
 	"github.com/rs/zerolog"
-	"github.com/speps/go-hashids"
-	"github.com/timjacobi/go-couchdb"
 	"gopkg.in/jmcvetta/napping.v3"
 	"gopkg.in/redis.v5"
 )
 
 type Settings struct {
-	Host                    string `envconfig:"HOST" required:"true"`
-	Port                    string `envconfig:"PORT" required:"true"`
-	CouchURL                string `envconfig:"COUCH_URL" required:"true"`
-	CouchDatabaseName       string `envconfig:"COUCH_DATABASE" required:"true"`
-	RedisAddr               string `envconfig:"REDIS_ADDR" required:"true"`
-	RedisPassword           string `envconfig:"REDIS_PASSWORD" required:"true"`
-	PostgresURL             string `envconfig:"DATABASE_URL" required:"true"`
-	StrikeAPIKey            string `envconfig:"STRIKE_API_KEY"`
-	SessionOffsetHashidSalt string `envconfig:"SESSION_OFFSET_HASHID_SALT"`
-	LoggedAs                string `envconfig:"LOGGED_AS"`
-	HerokuToken             string `envconfig:"HEROKU_TOKEN"`
-	HerokuAppName           string `envconfig:"HEROKU_APPNAME"`
+	Host          string `envconfig:"HOST" required:"true"`
+	Port          string `envconfig:"PORT" required:"true"`
+	RedisAddr     string `envconfig:"REDIS_ADDR" required:"true"`
+	RedisPassword string `envconfig:"REDIS_PASSWORD" required:"true"`
+	PostgresURL   string `envconfig:"DATABASE_URL" required:"true"`
+	HerokuToken   string `envconfig:"HEROKU_TOKEN"`
+	HerokuAppName string `envconfig:"HEROKU_APPNAME"`
 }
 
 var err error
 var s Settings
 var b napping.Session
 var pg *sqlx.DB
-var acd = accountd.NewClient()
-var hso *hashids.HashID
 var rds *redis.Client
 var log = zerolog.New(os.Stderr)
-var couch *couchdb.DB
 var tracklua string
 var blacklist map[string]bool
 
@@ -66,41 +51,9 @@ func main() {
 		log.Fatal().Err(err).Msg("couldn't connect to postgres")
 	}
 
-	// couchdb
-	couchS, err := couchdb.NewClient(s.CouchURL, nil)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to created couchdb client")
-	}
-	couch = couchS.DB(s.CouchDatabaseName)
-
-	// hashids for session offset
-	hd := hashids.NewData()
-	hd.Salt = s.SessionOffsetHashidSalt
-	hso = hashids.NewWithData(hd)
-
-	// track.lua
-	filename := "./track.lua"
-	// try the current directory
-	btracklua, err := ioutil.ReadFile(filename)
-	if err != nil {
-		// try some magic (based on the path of the source main.go)
-		_, this, _, _ := runtime.Caller(0)
-		here := path.Dir(this)
-		btracklua, err = ioutil.ReadFile(filepath.Join(here, filename))
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to read track.lua")
-		}
-	}
-	tracklua = string(btracklua)
-
 	// referrer blacklist
 	blacklist = buildReferrerBlacklist()
 	log.Print("using referrer blacklist with ", len(blacklist), " entries.")
-
-	// logged as
-	if s.LoggedAs != "" {
-		log.Print("logged by default as ", s.LoggedAs)
-	}
 
 	// run routines or start the server
 	if len(os.Args) == 1 {

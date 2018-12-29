@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/speps/go-hashids"
+	"github.com/jmoiron/sqlx/types"
 	"github.com/valyala/fasthttp"
 )
 
@@ -33,53 +33,62 @@ func redisKeyFactory(code, day string) func(string) string {
 }
 func makeMonthKey(code, month string) string { return code + "." + month }
 
-func makeCodeForUser(userId string) string {
-	userNumber := 0
-	for _, char := range userId {
-		userNumber += int(char)
-	}
-
-	hd := hashids.NewData()
-	hd.MinLength = 5
-	hd.Alphabet = "abcdefghijklmnopqrstuvwxyz1234567890"
-	h := hashids.NewWithData(hd)
-	r, _ := h.Encode([]int{userNumber, randomNumber(9999)})
-	return r
-}
-
 func randomNumber(r int) int {
 	rand.Seed(time.Now().UnixNano())
 	return rand.Intn(r)
 }
 
-func dayFromRedis(code, day string) Day {
-	key := redisKeyFactory(code, day)
+func sessionsFromRedis(domain, day string) Day {
+	var sessions []Session
+	scankey := redisKeyFactory(domain, day)("*")
 
-	compendium := Day{
-		Id:       makeBaseKey(code, day),
-		Sessions: make(map[string]string),
-		Pages:    make(map[string]int),
-	}
-
-	if val, err := rds.HGetAll(key("s")).Result(); err == nil {
-		for k, v := range val {
-			compendium.Sessions[k] = v
+	iter := rds.Scan(0, scankey, 100).Iterator()
+	for iter.Next() {
+		sessionkey := iter.Val()
+		events, err := rds.LRange(sessionkey, 0, -1).Result()
+		if err != nil {
+			log.Error().Str("skey", sessionkey).Err(err).
+				Msg("error reading session from redis")
+			continue
 		}
-	}
-	if val, err := rds.HGetAll(key("p")).Result(); err == nil {
-		for k, v := range val {
-			if count, err := strconv.Atoi(v); err == nil {
-				compendium.Pages[k] = count
+
+		session := Session{
+			Referrer: events[0],
+		}
+		for _, event := range events[1:] {
+			if points, err := strconv.Atoi(event); err == nil {
+				session.Events = append(session.Events, points)
+			} else {
+				session.Events = append(session.Events, event)
 			}
 		}
+		sessions = append(sessions, session)
+	}
+	if err := iter.Err(); err != nil {
+		log.Error().Str("key", scankey).Err(err).Msg("error scanning from redis")
 	}
 
-	return compendium
+	var rawsessions types.JSONText
+	rawsessions, _ = json.Marshal(sessions)
+
+	return Day{
+		Day:         day,
+		RawSessions: rawsessions,
+	}
 }
 
-func deleteDayFromRedis(code, day string) error {
-	key := redisKeyFactory(code, day)
-	return rds.Del(key("s"), key("p")).Err()
+func deleteDayFromRedis(domain, day string) error {
+	scankey := redisKeyFactory(domain, day)("*")
+
+	var sessionkeys []string
+
+	iter := rds.Scan(0, scankey, 100).Iterator()
+	for iter.Next() {
+		sessionkey := iter.Val()
+		sessionkeys = append(sessionkeys, sessionkey)
+	}
+
+	return rds.Del(sessionkeys...).Err()
 }
 
 func urlHost(full string) string {

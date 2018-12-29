@@ -1,8 +1,6 @@
 const React = require('react')
 const render = require('react-dom').render
 
-window.xtend = require('xtend')
-
 const log = require('./log')
 const Main = require('./Main')
 

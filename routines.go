@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/ogier/pflag"
-	"github.com/timjacobi/go-couchdb"
 )
 
 func daily() {
@@ -44,34 +43,38 @@ func monthly() {
 	lastmonth := parsed.AddDate(0, -1, 0).Format(MONTHFORMAT)
 
 	compileMonthStats(lastmonth)
-	deleteOlderDayStats()
 }
 
 func compileDayStats(day string) {
 	log.Print("-- running compileDayStats routine for ", day, ".")
 
-	sites, err := fetchSites()
+	domains, err := rds.SMembers("compile:" + day).Result()
 	if err != nil {
-		log.Fatal().Err(err).Msg("error fetching list of sites from postgres")
+		log.Fatal().Err(err).Str("today", day).
+			Msg("error todays domains from redis.")
 	}
 
-	for _, site := range sites {
+	for _, domain := range domains {
 		log.Print("-------------")
-		log.Print(" > site ", site.Code, " (", site.Name, "), from ", site.Owner, ":")
+		log.Print(" > site ", domain)
 
-		// make a couchdb document representing a day, with data from redis
-		stats := dayFromRedis(site.Code, day)
+		// grab all data from redis
+		stats := sessionsFromRedis(domain, day)
 		log.Print(stats)
 
 		// check for zero-stats (to save disk space we won't store these)
-		if len(stats.Sessions) == 0 && len(stats.Pages) == 0 {
+		if len(stats.RawSessions) < 3 {
 			log.Print("   : skipped saving because everything is zero.")
 			continue
 		}
 
-		// save on couch
-		if _, err = couch.Put(stats.Id, stats, ""); err != nil {
-			log.Print("   : failed to save stats on couch: ", err)
+		// save on postgres
+		if _, err = pg.Exec(`
+INSERT INTO days
+  (domain, day, sessions)
+VALUES ($1, $2, $3)
+        `, domain, stats.Day, stats.RawSessions); err != nil {
+			log.Print("   : failed to save stats on postgres: ", err)
 			continue
 		}
 		log.Print("   : saved on couch.")
@@ -93,23 +96,17 @@ func compileMonthStats(month string) {
 		// make a couchdb document representing a month,
 		// with data from day couchdb documents
 		stats := Month{
-			Id:           makeMonthKey(site.Code, month),
 			TopReferrers: make(map[string]int, 10),
 			TopPages:     make(map[string]int, 10),
 		}
 
-		// first fetch the data from couchdb
-		res := CouchDBDayResults{}
-		err := couch.AllDocs(&res, couchdb.Options{
-			"startkey":     makeBaseKey(site.Code, month+"01"),
-			"endkey":       makeBaseKey(site.Code, month+"31"),
-			"include_docs": true,
-		})
-		if err != nil {
-			log.Print("   : failed to fetch days from couchdb: ", err)
-			continue
-		}
-		days := res.toDayList()
+		// first fetch the data from database
+		var days []Day
+		pg.Select(&days, `
+SELECT day, sessions FROM days
+WHERE domain = $1 AND day > $2 AND day < $3
+ORDER BY day DESC
+        `)
 
 		// reduce everything
 		allpages := make(map[string]int)
@@ -173,34 +170,6 @@ WHERE id = $1
         `, site.Owner, month)
 		if err != nil {
 			log.Print("   : failed to set months_using: ", err)
-		}
-	}
-}
-
-func fetchSites() (sites []Site, err error) {
-	err = pg.Select(&sites, `SELECT * FROM sites`)
-	return sites, err
-}
-
-func deleteOlderDayStats() {
-	today := presentDay()
-	a100daysago := today.AddDate(0, 0, -100)
-	a130daysago := today.AddDate(0, 0, -130)
-	sites, err := fetchSites()
-
-	if err != nil {
-		log.Print("error fetching all sites for deleting older day stats: ", err)
-		return
-	}
-
-	for _, site := range sites {
-		cur := a100daysago
-		for {
-			deleteDayFromRedis(site.Code, cur.Format(DATEFORMAT))
-			if cur.Before(a130daysago) {
-				break
-			}
-			cur = cur.AddDate(0, 0, -1)
 		}
 	}
 }

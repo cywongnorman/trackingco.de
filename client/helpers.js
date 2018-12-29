@@ -1,19 +1,17 @@
+/** @format */
+
 const randomColor = require('randomcolor')
 const color = require('color')
 const levenshtein = require('leven')
 const url = require('url')
+const golangFormat = require('nice-time')
 
-const graphql = require('./graphql')
+export const MONTH = 'MONTH'
+export const DAY = 'DAY'
+export const DATEFORMAT = '20060102'
+export const MONTHFORMAT = '200601'
 
-module.exports.coloursfragment = graphql.createFragment(`
-  fragment on Colours {
-    bar1
-    line1
-    background
-  }
-`)
-
-module.exports.mergeColours = function () {
+export function mergeColours() {
   var colours = defaultColours
   for (let i = 0; i < arguments.length; i++) {
     let colourSet = arguments[i]
@@ -35,13 +33,14 @@ const defaultColours = {
 }
 
 const months = require('months')
-module.exports.formatdate = function formatdate (d) {
+export function formatdate(d) {
   if (d) {
     let month = months.abbr[parseInt(d.slice(4, 6)) - 1]
     return d.slice(6) + '/' + month + '/' + d.slice(0, 4)
   }
 }
-module.exports.formatmonth = function formatmonth (d) {
+
+export function formatmonth(d) {
   if (d) {
     let month = months.abbr[parseInt(d.slice(4, 6)) - 1]
     return month + '/' + d.slice(0, 4)
@@ -49,7 +48,7 @@ module.exports.formatmonth = function formatmonth (d) {
 }
 
 var colourCache = {}
-module.exports.referrerColour = function referrerColour (referrer) {
+export function referrerColour(referrer) {
   referrer = url.parse(referrer).host || referrer // handle "<direct>" case
 
   if (colourCache[referrer]) return colourCache[referrer]
@@ -74,7 +73,7 @@ module.exports.referrerColour = function referrerColour (referrer) {
   return colourCache[referrer]
 }
 
-function near (hex, distance) {
+function near(hex, distance) {
   var [h, s, v] = color(hex).hsv().color
   h = h / 360
   s = s / 100
@@ -83,8 +82,10 @@ function near (hex, distance) {
   let dist = distance / 10
 
   h += Math.random() / 30 + dist
-  s = s > 0.5 ? s - (Math.random() / 10 + dist) : s + (Math.random() / 10 + dist)
-  v = v > 0.5 ? v - (Math.random() / 10 + dist) : v + (Math.random() / 10 + dist)
+  s =
+    s > 0.5 ? s - (Math.random() / 10 + dist) : s + (Math.random() / 10 + dist)
+  v =
+    v > 0.5 ? v - (Math.random() / 10 + dist) : v + (Math.random() / 10 + dist)
 
   return color({
     h: mirror(h) * 360,
@@ -93,12 +94,87 @@ function near (hex, distance) {
   }).hex()
 }
 
-function mirror (value) {
-  return value > 1
-  ? value < 0
-    ? (value + 1000) % 1
-    : 1 - (value % 1)
-  : value
+function mirror(value) {
+  return value > 1 ? (value < 0 ? (value + 1000) % 1 : 1 - (value % 1)) : value
 }
 
-module.exports.title = name => name ? `${name} | trackingco.de` : 'trackingco.de'
+export const title = name =>
+  name ? `${name} | trackingco.de` : 'trackingco.de'
+
+function makefill(kind) {
+  var format
+  var previous
+  var next
+  var frombeggining
+  var key
+
+  if (kind === MONTH) {
+    format = MONTHFORMAT
+    previous = curr => {
+      let prev = new Date(curr)
+      prev.setMonth(prev.getMonth() - 1)
+      return prev
+    }
+    next = curr => {
+      let next = new Date(curr)
+      next.setMonth(next.getMonth() + 1)
+      return next
+    }
+    frombeggining = (start, offset) => {
+      let current = new Date(start)
+      current.setMonth(current.getMonth() - offset)
+      return current
+    }
+    key = 'month'
+  } else if (kind === DAY) {
+    format = DATEFORMAT
+    previous = curr => {
+      let prev = new Date(curr)
+      prev.setDate(prev.getDate() - 1)
+      return prev
+    }
+    frombeggining = (start, offset) => {
+      let current = new Date(start)
+      current.setDate(current.getDate() - offset)
+      return current
+    }
+    next = curr => {
+      let next = new Date(curr)
+      next.setDate(next.getDate() + 1)
+      return next
+    }
+    key = 'day'
+  }
+
+  return function(periods, offset, start) {
+    // fill in missing periods (days/months) with zeroes
+    var allperiods = new Array(offset)
+
+    start = start || new Date()
+
+    var prev = previous(start)
+    var current = frombeggining(start, offset)
+
+    var currentpos = 0
+    var rowpos = 0
+
+    while (current < prev) {
+      let currentDate = golangFormat(format, current)
+
+      if (periods[rowpos][key] === currentDate) {
+        allperiods[currentpos] = periods[rowpos]
+        rowpos++
+      } else {
+        allperiods[currentpos] = {[key]: currentDate}
+      }
+
+      current = next(current)
+      currentpos++
+    }
+
+    return allperiods
+  }
+}
+
+export const fillmonths = makefill(MONTH)
+export const filldays = makefill(DAY)

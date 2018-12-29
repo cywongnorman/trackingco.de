@@ -18,9 +18,8 @@ func fastHTTPHandler(c *fasthttp.RequestCtx) {
 
 	dotspl := strings.Split(path, ".")
 	if len(dotspl) == 2 && dotspl[1] == "xml" {
-		hashid := dotspl[0][1:]
-		c.SetUserValue("sessionhashid", hashid)
-		track(c)
+		cuid := dotspl[0][1:]
+		track(c, cuid)
 		return
 	}
 
@@ -30,38 +29,15 @@ func fastHTTPHandler(c *fasthttp.RequestCtx) {
 		return
 	}
 
+	if strings.HasPrefix(path, "/query/") {
+		handleQuery(path, c)
+	}
+
 	switch path {
 	case "/":
-		c.SendFile("client/landing.html")
-	case "/_graphql":
-		user := extractUserFromJWT(c)
-		if user == "" {
-			user = s.LoggedAs
-			log.Print("forced auth as ", user)
-		}
-		context := context.WithValue(
-			context.TODO(),
-			"loggeduser", user,
-		)
-
-		var gqr GraphQLRequest
-		if err = json.Unmarshal(c.Request.Body(), &gqr); err != nil {
-			c.Error("failed to read graphql request: "+err.Error(), 400)
-			return
-		}
-		result := query(gqr, context)
-		if jsonresult, err := json.Marshal(result); err != nil {
-			c.Error("failed to marshal graphql response: "+err.Error(), 500)
-			return
-		} else {
-			c.SetContentType("application/json")
-			c.SetBody(jsonresult)
-		}
-		context.Done()
-	case "/_/webhooks/strike":
-		handleStrikeWebhook(c)
+		c.SendFile("static/landing.html")
 	case "/favicon.ico":
-		c.SendFile("client/logo.png")
+		c.SendFile("static/logo.png")
 	case "/sites", "/account":
 		serveClient(c)
 	default:
@@ -70,15 +46,41 @@ func fastHTTPHandler(c *fasthttp.RequestCtx) {
 }
 
 func serveClient(c *fasthttp.RequestCtx) {
-	c.SendFile("client/index.html")
+	c.SendFile("static/index.html")
 }
 
-func extractUserFromJWT(ctx *fasthttp.RequestCtx) string {
-	token := string(ctx.Request.Header.Peek("Authorization"))
-	user, err := acd.VerifyAuth(token)
-	if err != nil {
-		ctx.Error("wrong authorization token: "+token, 401)
-		return ""
+func handleQuery(path string, c *fasthttp.RequestCtx) {
+	ctx := context.TODO()
+
+	var params Params
+	if err = json.Unmarshal(c.Request.Body(), &params); err != nil {
+		c.Error("failed to read request: "+err.Error(), 400)
+		return
 	}
-	return user
+
+	var result interface{}
+
+	switch path {
+	case "/query/days":
+		result, err = queryDays(params)
+		break
+	case "/query/months":
+		result, err = queryMonths(params)
+		break
+	}
+
+	if err != nil {
+		c.Error("query failure: "+err.Error(), 500)
+		return
+	}
+
+	if jsonresult, err := json.Marshal(result); err != nil {
+		c.Error("failed to marshal graphql response: "+err.Error(), 500)
+		return
+	} else {
+		c.SetContentType("application/json")
+		c.SetBody(jsonresult)
+	}
+
+	ctx.Done()
 }

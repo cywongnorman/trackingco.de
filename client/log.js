@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   info () {
     notie.alert({
       text: Array.prototype.join.call(arguments, ' '),

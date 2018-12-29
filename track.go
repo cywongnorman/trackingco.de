@@ -2,14 +2,16 @@ package main
 
 import (
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/lucsky/cuid"
 	"github.com/valyala/fasthttp"
 )
 
-func track(c *fasthttp.RequestCtx) {
+func track(c *fasthttp.RequestCtx, session string) {
 	// cors
 	c.Response.Header.Add("Vary", "Origin")
 
@@ -27,17 +29,6 @@ func track(c *fasthttp.RequestCtx) {
 
 	logger := log.With().Logger()
 
-	// tracking code
-	code := string(c.FormValue("c"))
-	if code == "" {
-		logger.Warn().Msg("didn't send tracking code")
-		c.Error("didn't send tracking code.", 400)
-		return
-	}
-
-	logger = logger.With().Str("code", code).Logger()
-
-	// page
 	upage, err := url.Parse(string(c.Referer()))
 	if err != nil {
 		logger.Warn().Err(err).Str("ref", string(c.Referer())).
@@ -45,31 +36,52 @@ func track(c *fasthttp.RequestCtx) {
 		c.Error("invalid Referer: "+string(c.Referer())+" - "+err.Error(), 400)
 		return
 	}
-	page := strings.TrimRight(upage.Path, "/")
-	if page == "" {
-		page = "/"
-	}
-	if upage.RawQuery != "" {
-		page = page + "?" + upage.RawQuery
-	}
 
-	logger = logger.With().Str("page", page).Logger()
+	// domain
+	domain := upage.Hostname()
+	logger = logger.With().Str("domain", domain).Logger()
 
-	// points
-	points, err := strconv.Atoi(string(c.FormValue("p")))
-	if err != nil {
+	// event
+	var event string
+
+	if points, err := strconv.Atoi(string(c.FormValue("p"))); err == nil {
 		// if a call to tc() is made with no arguments,
-		// it means "p" is blank, so track as if point were 1.
-		points = 1
+		// it means "p" is blank, so track a pageview (equivalent to 1 point).
+		page := strings.TrimRight(upage.Path, "/")
+		if page == "" {
+			page = "/"
+		}
+		if upage.RawQuery != "" {
+			// if there's any querystring we'll keep it, but not its value
+			// it will be something like /user?{id,page}, so in case there's an
+			// adwords or similar stuff happening we'll see just /?{utm_source}
+			query := upage.Query()
+			querykeys := make([]string, len(query))
+			var i = 0
+			for qk, _ := range query {
+				querykeys[i] = qk
+				i++
+			}
+			sort.Strings(querykeys)
+			page = page + "?" + "{" + strings.Join(querykeys) + "}"
+		}
+		logger = logger.With().Str("page", page).Logger()
+
+		event = page
 	} else {
 		// if tc() is called with a number of points as an argument,
 		// "p" will have a value, which will be stored at `points`.
 		// that means we shouldn't track a pageview.
 		// pageviews are only tracked from blank tc() calls.
-		page = ""
+		logger = logger.With().Int("points", points).Logger()
+
+		event = string(c.FormValue("p"))
 	}
 
-	logger = logger.With().Int("points", points).Logger()
+	// plumbing
+	threedays := int(time.Hour * 72)
+	today := presentDay().Format(DATEFORMAT)
+	keyfn := redisKeyFactory(domain, today)
 
 	// referrer
 	referrer := string(c.FormValue("r")) // may be "". means <direct>.
@@ -80,16 +92,9 @@ func track(c *fasthttp.RequestCtx) {
 			if _, blacklisted := blacklist[uref.Host]; blacklisted {
 				log.Info().Str("ref", uref.Host).Msg("referrer on blacklist")
 
-				// send fake/invalid hashid to spammer
-				if hi, err := hso.Encode([]int{-1, randomNumber(999), randomNumber(99), 37}); err == nil {
-					c.SetStatusCode(200)
-					c.SetBody([]byte(hi))
-					return
-				} else {
-					logger.Warn().Err(err).Msg("error encoding fake hashid")
-					c.Error("error encoding fake hashid: "+err.Error(), 500)
-					return
-				}
+				// send fake/invalid cuid to spammer
+				session = "z" + cuid.New()
+				goto end
 			}
 
 			uref.Path = strings.TrimRight(uref.Path, "/") // strip ending slashes
@@ -100,69 +105,36 @@ func track(c *fasthttp.RequestCtx) {
 		}
 	}
 
-	logger = logger.With().Str("ref", referrer).Logger()
+	logger = logger.With().
+		Str("ref", referrer).
+		Str("session", session).Logger()
 
-	// session (a hashid that translates to a number, which is the offset for the array of points)
-	var offset int
-	var sessioncode int
-	hi := c.UserValue("sessionhashid").(string)
-
-	logger = logger.With().Str("session", hi).Logger()
-
-	// try to decode (at first it should be an invalid string)
-	if offsetarr, err := hso.DecodeWithError(hi); err == nil && len(offsetarr) == 2 {
-		// success decoding, it is a _valid_ existing session
-		offset = offsetarr[0]
-		// this session code will be used to fetch the referrer for this session
-		sessioncode = offsetarr[1]
-		referrer = rds.Get("rs:" + strconv.Itoa(sessioncode)).Val()
+	if session[0] != 'c' || strings.Index(session, "-") != -1 {
+		// not a valid cuid, means it's the first visit of session
+		// create session code
+		session = cuid.New()
+		// send the referrer first
+		err = rds.Rpush(keyfn(session), referrer, event).Error()
 	} else {
-		// error decoding, so it is a new session
-		offset = -1
-		// this session code will be used to store the referrer for this session
-		sessioncode = randomNumber(999999999)
-		rds.Set("rs:"+strconv.Itoa(sessioncode), referrer, time.Hour*5)
+		err = rds.RpushX(keyfn(session), event).Error()
 	}
 
-	logger = logger.With().Int("offset", offset).Logger()
+	// expire session data
+	rds.Expire(keyfn(session), threedays)
 
-	// store data to redis
-	twodays := int(time.Hour * 48)
-	key := redisKeyFactory(code, presentDay().Format(DATEFORMAT))
+	// add this domain to the list of domains that should be compiled today
+	rds.SAdd("compile:"+today, domain)
+	rds.Expire("compile:"+today, threedays)
 
-	result := rds.Eval(
-		tracklua,
-		[]string{
-			key("p"), // KEYS[1]
-			key("s"), // KEYS[2]
-		},
-		page,     // ARGV[1]
-		referrer, // ARGV[2]
-		offset,   // ARGV[3]
-		twodays,  // ARGV[4]
-		points,   // ARGV[5]
-	)
-
-	if val, err := result.Result(); err != nil {
-		logger.Warn().Err(err).Msg("error executing track.lua")
-		c.Error("error executing track.lua: "+err.Error(), 500)
-	} else {
-		offset = int(val.(int64))
-	}
-
-	// send session to user
-	hi, err = hso.Encode([]int{offset, sessioncode})
 	if err != nil {
-		logger.Warn().Err(err).Msg("error encoding hashid for session offset")
-		c.Error(
-			"error encoding hashid for session offset "+string(offset)+": "+
-				err.Error(),
-			500,
-		)
-		return
+		logger.Warn().Err(err).Msg("error tracking")
+		c.Error("error tracking: "+err.Error(), 500)
 	}
+
+end:
+	// send session cuid to user
 	c.SetStatusCode(200)
-	c.SetBody([]byte(hi))
+	c.SetBody([]byte(session))
 
 	logger.Info().Msg("tracked")
 }

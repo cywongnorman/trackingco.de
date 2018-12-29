@@ -1,7 +1,7 @@
 const randomWord = require('porreta')
 
-module.exports = function (code, domain = 't.trackingco.de') {
-  return `(function (d, s, c) {
+module.exports = function (domain = 't.trackingco.de') {
+  return `(function (d, s) {
   var x, h, n = Date.now()
   tc = function (p) {
     m = s.getItem('_tcx') > n ? s.getItem('_tch') : '${randomWord()}-${randomWord()}'
@@ -12,9 +12,9 @@ module.exports = function (code, domain = 't.trackingco.de') {
         s.setItem('_tcx', n + 14400000)
       }
     })
-    x.open('GET', 'https://${domain}/'+m+'.xml?r='+d.referrer+'&c='+c+(p?'&p='+p:''))
+    x.open('GET', 'https://${domain}/'+m+'.xml?r='+d.referrer+(p?'&p='+p:''))
     x.send()
   }
   tc()
-})(document, localStorage, '${code}')`
+})(document, localStorage)`
 }
