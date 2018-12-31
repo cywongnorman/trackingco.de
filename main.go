@@ -7,7 +7,6 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	_ "github.com/lib/pq"
 	"github.com/rs/zerolog"
-	"gopkg.in/jmcvetta/napping.v3"
 	"gopkg.in/redis.v5"
 )
 
@@ -17,17 +16,13 @@ type Settings struct {
 	RedisAddr     string `envconfig:"REDIS_ADDR" required:"true"`
 	RedisPassword string `envconfig:"REDIS_PASSWORD" required:"true"`
 	PostgresURL   string `envconfig:"DATABASE_URL" required:"true"`
-	HerokuToken   string `envconfig:"HEROKU_TOKEN"`
-	HerokuAppName string `envconfig:"HEROKU_APPNAME"`
 }
 
 var err error
 var s Settings
-var b napping.Session
 var pg *sqlx.DB
 var rds *redis.Client
-var log = zerolog.New(os.Stderr)
-var tracklua string
+var log = zerolog.New(os.Stderr).Output(zerolog.ConsoleWriter{Out: os.Stderr})
 var blacklist map[string]bool
 
 func main() {

@@ -2,7 +2,6 @@ package main
 
 import (
 	"net/url"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -42,9 +41,9 @@ func track(c *fasthttp.RequestCtx, session string) {
 	logger = logger.With().Str("domain", domain).Logger()
 
 	// event
-	var event string
+	var event interface{}
 
-	if points, err := strconv.Atoi(string(c.FormValue("p"))); err == nil {
+	if points, err := strconv.Atoi(string(c.FormValue("p"))); err != nil {
 		// if a call to tc() is made with no arguments,
 		// it means "p" is blank, so track a pageview (equivalent to 1 point).
 		page := strings.TrimRight(upage.Path, "/")
@@ -52,18 +51,7 @@ func track(c *fasthttp.RequestCtx, session string) {
 			page = "/"
 		}
 		if upage.RawQuery != "" {
-			// if there's any querystring we'll keep it, but not its value
-			// it will be something like /user?{id,page}, so in case there's an
-			// adwords or similar stuff happening we'll see just /?{utm_source}
-			query := upage.Query()
-			querykeys := make([]string, len(query))
-			var i = 0
-			for qk, _ := range query {
-				querykeys[i] = qk
-				i++
-			}
-			sort.Strings(querykeys)
-			page = page + "?" + "{" + strings.Join(querykeys) + "}"
+			page = page + condenseQuery(upage.Query())
 		}
 		logger = logger.With().Str("page", page).Logger()
 
@@ -75,13 +63,20 @@ func track(c *fasthttp.RequestCtx, session string) {
 		// pageviews are only tracked from blank tc() calls.
 		logger = logger.With().Int("points", points).Logger()
 
-		event = string(c.FormValue("p"))
+		event = points
 	}
 
 	// plumbing
-	threedays := int(time.Hour * 72)
+	threedays := time.Hour * 72
 	today := presentDay().Format(DATEFORMAT)
 	keyfn := redisKeyFactory(domain, today)
+
+	// temp
+	code := string(c.FormValue("c"))
+	_, err = pg.Exec(`INSERT INTO temp_migration VALUES ($1, $2) ON CONFLICT (domain, code) DO NOTHING`, domain, code)
+	if err != nil {
+		log.Error().Err(err).Msg("temp")
+	}
 
 	// referrer
 	referrer := string(c.FormValue("r")) // may be "". means <direct>.
@@ -97,11 +92,15 @@ func track(c *fasthttp.RequestCtx, session string) {
 				goto end
 			}
 
+			// process (turns https://x.com/plic/?xyz=q&uel=2 into x.com/plic?{xyz,uel})
 			uref.Path = strings.TrimRight(uref.Path, "/") // strip ending slashes
 			if uref.Path == "" {
 				uref.Path = "/"
 			}
-			referrer = uref.String()
+			referrer = uref.Hostname() + uref.Path
+			if uref.RawQuery != "" {
+				referrer = referrer + condenseQuery(uref.Query())
+			}
 		}
 	}
 
@@ -114,9 +113,9 @@ func track(c *fasthttp.RequestCtx, session string) {
 		// create session code
 		session = cuid.New()
 		// send the referrer first
-		err = rds.Rpush(keyfn(session), referrer, event).Error()
+		err = rds.RPush(keyfn(session), referrer, event).Err()
 	} else {
-		err = rds.RpushX(keyfn(session), event).Error()
+		err = rds.RPushX(keyfn(session), event).Err()
 	}
 
 	// expire session data

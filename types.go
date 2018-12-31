@@ -7,39 +7,6 @@ type Session struct {
 	Events   []interface{} `json:"events"`
 }
 
-type Entry struct {
-	Address string `json:"a"`
-	Count   int    `json:"c"`
-}
-
-func EntriesFromMap(dict map[string]int) []Entry {
-	entries := make([]Entry, len(dict))
-	i := 0
-	for ref, count := range dict {
-		entries[i] = Entry{ref, count}
-		i++
-	}
-	return entries
-}
-func MapFromEntries(entries []Entry) map[string]int {
-	dict := make(map[string]int, len(entries))
-	for _, entry := range entries {
-		dict[entry.Address] = entry.Count
-	}
-	return dict
-}
-
-type EntrySort []Entry
-
-func (a EntrySort) Len() int           { return len(a) }
-func (a EntrySort) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a EntrySort) Less(i, j int) bool { return a[i].Count < a[j].Count }
-
-type SessionGroup struct {
-	Referrer string `json:"referrer"`
-	Scores   []int  `json:"scores"`
-}
-
 type Day struct {
 	Day string `json:"day,omitempty" pg:"day"`
 
@@ -49,21 +16,68 @@ type Day struct {
 	// , ...
 	// ]
 	RawSessions types.JSONText `pg:"sessions" json:"-"`
+
+	sessions []Session
+}
+
+func (day Day) stats() (stats Stats) {
+	for _, s := range day.sessions {
+		stats.NSessions++
+
+		for _, event := range s.Events {
+			switch v := event.(type) {
+			case int:
+				stats.Score += v
+			case string:
+				stats.NPageviews++
+				stats.Score += 1
+			}
+		}
+
+		if len(s.Events) == 1 {
+			if _, isPage := s.Events[0].(string); isPage {
+				stats.NBounces++
+			}
+		}
+	}
+	return
 }
 
 type Month struct {
-	Month string `json:"month,omitempty" pg:"month"`
+	Month string `json:"month" pg:"month"`
 
-	// the average bounce rate for this month, in units of 10000
-	// (for example, if the bounce rate is 43,78% it will be stored as 4378)
-	BounceRate int `json:"b" pg:"bounce_rate"`
+	Stats
+	Compendium
+}
+
+type Stats struct {
 	NSessions  int `json:"s" pg:"nsessions"`  // total number of sessions
+	NBounces   int `json:"b" pg:"nbounces"`   // sessions with just one pageview
 	NPageviews int `json:"v" pg:"npageviews"` // total number of pageviews
 	Score      int `json:"c" pg:"score"`      // total score (sum of all session scores)
+}
 
-	// the top 10 referrers for this month, with their respective counts
-	TopReferrers map[string]int `json:"r"`
+type Compendium struct {
+	TopReferrers       map[string]int `json:"r" pg:"top_referrers"`
+	TopPages           map[string]int `json:"p" pg:"top_pages"`
+	TopReferrersScores map[string]int `json:"z" pg:"top_referrers_scores"`
+}
 
-	// the top 10 pages viewed this month, with their respective counts
-	TopPages map[string]int `json:"p"`
+func (c *Compendium) apply(session Session) {
+	count := c.TopReferrers[session.Referrer]
+	c.TopReferrers[session.Referrer] = count + 1
+
+	scores := c.TopReferrersScores[session.Referrer]
+	for _, event := range session.Events {
+		switch v := event.(type) {
+		case int:
+			scores += v
+		case string:
+			scores += 1
+
+			pv := c.TopPages[v]
+			c.TopPages[v] = pv + 1
+		}
+	}
+	c.TopReferrersScores[session.Referrer] = scores
 }

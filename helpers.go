@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"math/rand"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -38,7 +39,7 @@ func randomNumber(r int) int {
 	return rand.Intn(r)
 }
 
-func sessionsFromRedis(domain, day string) Day {
+func dayFromRedis(domain, day string) Day {
 	var sessions []Session
 	scankey := redisKeyFactory(domain, day)("*")
 
@@ -74,6 +75,7 @@ func sessionsFromRedis(domain, day string) Day {
 	return Day{
 		Day:         day,
 		RawSessions: rawsessions,
+		sessions:    sessions,
 	}
 }
 
@@ -91,14 +93,18 @@ func deleteDayFromRedis(domain, day string) error {
 	return rds.Del(sessionkeys...).Err()
 }
 
-func urlHost(full string) string {
-	if u, err := url.Parse(full); err == nil {
-		return u.Host
+func condenseQuery(query url.Values) string {
+	// if there's any querystring we'll keep it, but not its value
+	// it will be something like /user?{id,page}, so in case there's an
+	// adwords or similar stuff happening we'll see just /?{utm_source}
+	querykeys := make([]string, len(query))
+	var i = 0
+	for qk, _ := range query {
+		querykeys[i] = qk
+		i++
 	}
-	if full == "<direct>" {
-		return ""
-	}
-	return full
+	sort.Strings(querykeys)
+	return "?" + "{" + strings.Join(querykeys, ",") + "}"
 }
 
 func buildReferrerBlacklist() map[string]bool {
@@ -134,53 +140,4 @@ func buildReferrerBlacklist() map[string]bool {
 	}
 
 	return refmap
-}
-
-func herokuDomains(method, subpath string, data interface{}) (resp *herokuDomainResponse, err error) {
-	client := &fasthttp.Client{}
-
-	r := fasthttp.AcquireRequest()
-	r.SetRequestURI("https://api.heroku.com/apps/" + s.HerokuAppName + "/domains" + subpath)
-	r.Header.SetMethod(method)
-	r.Header.Set("Accept", "application/vnd.heroku+json; version=3")
-	r.Header.Set("Content-Type", "application/json")
-	r.Header.Set("Authorization", "Bearer "+s.HerokuToken)
-
-	if data != nil {
-		body, err := json.Marshal(data)
-		if err != nil {
-			return nil, err
-		}
-		r.SetBody(body)
-	}
-
-	w := fasthttp.AcquireResponse()
-	err = client.DoTimeout(r, w, time.Second*25)
-	if err != nil {
-		return nil, err
-	}
-
-	resp = &herokuDomainResponse{}
-	err = json.Unmarshal(w.Body(), resp)
-	return resp, err
-}
-
-type herokuDomainResponse struct {
-	Id       string `json:"id"`
-	Message  string `json:"message"`
-	Hostname string `json:"hostname"`
-	Status   string `json:"string"`
-}
-
-func sessionsFromScoremap(scoremap string) []int {
-	l := len(scoremap)
-	nsessions := (l - 1) / 2
-	sessions := make([]int, nsessions)
-	for s := 0; s < nsessions; s++ {
-		if l >= s*2+3 {
-			score, _ := strconv.Atoi(scoremap[s*2+1 : s*2+3])
-			sessions[s] = score
-		}
-	}
-	return sessions
 }

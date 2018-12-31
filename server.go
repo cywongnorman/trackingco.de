@@ -23,25 +23,23 @@ func fastHTTPHandler(c *fasthttp.RequestCtx) {
 		return
 	}
 
-	spl := strings.Split(path, "/")
-	if len(spl) == 3 && (spl[1] == "sites" || spl[1] == "public") {
-		serveClient(c)
-		return
-	}
-
-	if strings.HasPrefix(path, "/query/") {
-		handleQuery(path, c)
-	}
-
 	switch path {
 	case "/":
 		c.SendFile("static/landing.html")
 	case "/favicon.ico":
 		c.SendFile("static/logo.png")
-	case "/sites", "/account":
-		serveClient(c)
 	default:
-		fasthttp.FSHandler(".", 0)(c)
+		if strings.HasPrefix(path, "/query/") {
+			handleQuery(path, c)
+			return
+		}
+
+		if strings.HasPrefix(path, "/static/") {
+			fasthttp.FSHandler(".", 0)(c)
+			return
+		}
+
+		serveClient(c)
 	}
 }
 

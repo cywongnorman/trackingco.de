@@ -1,5 +1,7 @@
 package main
 
+import "encoding/json"
+
 type Params struct {
 	Domain         string `json:"domain"`
 	Last           int    `json:"last"`
@@ -19,17 +21,41 @@ LIMIT $2
 	if err != nil {
 		return
 	}
-	return days, nil
+
+	stats := make([]Stats, len(days))
+	compendium := &Compendium{
+		make(map[string]int),
+		make(map[string]int),
+		make(map[string]int),
+	}
+
+	for i, day := range days {
+		err = json.Unmarshal(day.RawSessions, &days[i].sessions)
+		if err != nil {
+			return
+		}
+
+		stats[i] = day.stats()
+
+		for _, session := range day.sessions {
+			compendium.apply(session)
+		}
+	}
+
+	return struct {
+		Days       []Day      `json:"days"`
+		Stats      []Stats    `json:"stats"`
+		Compendium Compendium `json:"compendium"`
+	}{days, stats, *compendium}, nil
 }
 
 func queryMonths(params Params) (res interface{}, err error) {
 	var months []Month
 	err = pg.Select(&months, `
 SELECT month,
-  bounce_rate, nsessions, npageviews, score,
-  referrer_scores,
+  nbounces, nsessions, npageviews, score,
   top_pages,
-  top_referrers
+  top_referrers --, top_referrers_scores
 FROM months
 WHERE domain = $1
 ORDER BY month DESC
@@ -45,8 +71,7 @@ LIMIT $2
 func queryToday(params Params) (res interface{}, err error) {
 	today := presentDay().Format(DATEFORMAT)
 	day := dayFromRedis(params.Domain, today)
-	day.Day = today
-	return day, nil
+	return day.stats(), nil
 }
 
 /*

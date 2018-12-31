@@ -1,7 +1,6 @@
 package main
 
 import (
-	"sort"
 	"time"
 
 	"github.com/ogier/pflag"
@@ -59,11 +58,11 @@ func compileDayStats(day string) {
 		log.Print(" > site ", domain)
 
 		// grab all data from redis
-		stats := sessionsFromRedis(domain, day)
-		log.Print(stats)
+		day := dayFromRedis(domain, day)
+		log.Print(day)
 
-		// check for zero-stats (to save disk space we won't store these)
-		if len(stats.RawSessions) < 3 {
+		// check for zero-day (to save disk space we won't store these)
+		if len(day.RawSessions) < 3 {
 			log.Print("   : skipped saving because everything is zero.")
 			continue
 		}
@@ -73,103 +72,105 @@ func compileDayStats(day string) {
 INSERT INTO days
   (domain, day, sessions)
 VALUES ($1, $2, $3)
-        `, domain, stats.Day, stats.RawSessions); err != nil {
-			log.Print("   : failed to save stats on postgres: ", err)
+        `, domain, day.Day, day.RawSessions); err != nil {
+			log.Print("   : failed to save day on postgres: ", err)
 			continue
 		}
-		log.Print("   : saved on couch.")
+		log.Print("   : saved on postgres.")
 	}
 }
 
 func compileMonthStats(month string) {
 	log.Print("-- running compileMonthStats routine for ", month, ".")
+	monthstart := month + "01"
+	monthend := month + "31"
 
-	sites, err := fetchSites()
+	var domains []string
+	err := pg.Select(&domains, `SELECT DISTINCT domain FROM days`)
 	if err != nil {
-		log.Fatal().Err(err).Msg("error fetching list of sites from postgres")
+		log.Fatal().Err(err).Str("month", month).
+			Msg("error fetching domains from postgres.")
 	}
 
-	for _, site := range sites {
+	for _, domain := range domains {
 		log.Print("-------------")
-		log.Print(" > site ", site.Code, " (", site.Name, "), from ", site.Owner, ":")
+		log.Print(" > site ", domain)
 
-		// make a couchdb document representing a month,
-		// with data from day couchdb documents
-		stats := Month{
-			TopReferrers: make(map[string]int, 10),
-			TopPages:     make(map[string]int, 10),
-		}
+		_, err := pg.Exec(`
+WITH sessions AS (
+  SELECT jsonb_array_elements(sessions) AS session
+  FROM days
+  WHERE domain = $1 AND day >= $2 AND day <= $3
+), events AS (
+  SELECT
+    session->>'referrer' AS referrer,
+    jsonb_array_elements(session->'events') AS event
+  FROM sessions
+), referrers AS (
+  SELECT session->>'referrer' AS referrer FROM sessions
+), nbounces AS (
+  SELECT count(*) AS nbounces
+  FROM sessions
+  WHERE jsonb_array_length(session->'events') = 1
+    AND jsonb_typeof(session->'events'->0) = 'string'
+), pages AS (
+  SELECT event#>>'{}' AS page
+  FROM events
+  WHERE jsonb_typeof(event) = 'string'
+), score AS (
+  SELECT
+    sum(CASE WHEN jsonb_typeof(event) = 'number' THEN event::text::int ELSE 1 END)
+      AS score
+  FROM events
+), top_pages AS (
+  SELECT jsonb_object_agg(page, count) AS top_pages FROM (
+    SELECT page, count(*)
+    FROM pages
+    GROUP BY page
+    ORDER BY count DESC
+    LIMIT 10
+  )x
+), top_referrers AS (
+  SELECT jsonb_object_agg(referrer, count) AS top_referrers FROM (
+    SELECT referrer, count(*)
+    FROM referrers
+    GROUP BY referrer
+    ORDER BY count DESC
+    LIMIT 10
+  )x
+), top_referrers_scores AS (
+  SELECT jsonb_object_agg(referrer, sum) AS top_referrers_scores FROM (
+    SELECT referrer, sum(CASE WHEN jsonb_typeof(event) = 'number' THEN event::text::int ELSE 1 END)
+    FROM events
+    GROUP BY referrer
+    ORDER BY sum DESC
+    LIMIT 10
+  )x
+), agg AS (
+  SELECT
+    (SELECT score FROM score) AS score,
+    (SELECT nbounces FROM nbounces) AS nbounces,
+    (SELECT count(*) FROM sessions) AS nsessions,
+    (SELECT count(*) FROM pages) AS npageviews,
+    (SELECT top_referrers FROM top_referrers) AS top_referrers,
+    (SELECT top_referrers_scores FROM top_referrers_scores) AS top_referrers_scores,
+    (SELECT top_pages FROM top_pages) AS top_pages
+), del AS (
+  DELETE FROM days
+  WHERE domain = $1 AND day >= $2 AND day <= $3
+)
 
-		// first fetch the data from database
-		var days []Day
-		pg.Select(&days, `
-SELECT day, sessions FROM days
-WHERE domain = $1 AND day > $2 AND day < $3
-ORDER BY day DESC
-        `)
-
-		// reduce everything
-		allpages := make(map[string]int)
-		allreferrers := make(map[string]int)
-		sessionswithscore1 := 0
-		for _, day := range days {
-			for page, count := range day.Pages {
-				allpages[page] += count
-				stats.Pageviews += count
-			}
-			for referrer, scoremap := range day.Sessions {
-				sessions := sessionsFromScoremap(scoremap)
-				stats.Sessions += len(sessions)
-				allreferrers[referrer] += len(sessions)
-				for _, score := range sessions {
-					stats.Score += score
-					if score == 1 {
-						sessionswithscore1++
-					}
-				}
-			}
-		}
-		if stats.Sessions > 0 {
-			stats.BounceRate = 10000 * sessionswithscore1 / stats.Sessions
-		}
-
-		pageEntries := EntriesFromMap(allpages)
-		if len(pageEntries) > 10 {
-			sort.Sort(sort.Reverse(EntrySort(pageEntries)))
-			pageEntries = pageEntries[:10]
-		}
-		stats.TopPages = MapFromEntries(pageEntries)
-
-		referrerEntries := EntriesFromMap(allreferrers)
-		if len(referrerEntries) > 10 {
-			sort.Sort(sort.Reverse(EntrySort(referrerEntries)))
-			referrerEntries = referrerEntries[:10]
-		}
-		stats.TopReferrers = MapFromEntries(referrerEntries)
-
-		log.Print(stats)
-
-		// check for zero-stats (to save disk space we won't store these)
-		if stats.Sessions == 0 && stats.Pageviews == 0 {
-			log.Print("   : skipped saving because everything is zero.")
-			continue
-		}
-
-		// save on couch
-		if _, err = couch.Put(stats.Id, stats, ""); err != nil {
-			log.Print("   : failed to save stats on couch: ", err)
-			continue
-		}
-		log.Print("   : saved on couch.")
-
-		// track this user as having used the service this month
-		_, err = pg.Exec(`
-UPDATE users
-SET months_using = array_append(array_remove(months_using, $2), $2)
-WHERE id = $1
-        `, site.Owner, month)
+INSERT INTO months
+  (domain, month, score, nbounces, nsessions, npageviews, top_referrers, top_referrers_scores, top_pages)
+  SELECT
+    $1, $4, score, nbounces, nsessions, npageviews, top_referrers, top_referrers_scores, top_pages
+  FROM agg
+        `, domain, monthstart, monthend, month)
 		if err != nil {
-			log.Print("   : failed to set months_using: ", err)
+			log.Print("   : failed to build monthly stats: ", err)
+			continue
 		}
+		log.Print("   : monthly stats built.")
+
 	}
 }
