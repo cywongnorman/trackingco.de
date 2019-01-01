@@ -16,7 +16,7 @@ export default function SiteDetail({domain}) {
 
   let [today, setToday] = useState({})
   let [days, setDays] = useState({days: [], stats: [], compendium: {}})
-  let [months, setMonths] = useState([])
+  let [months, setMonths] = useState({months: [], compendium: {}})
 
   useEffect(
     () => {
@@ -92,9 +92,9 @@ async function queryMonths(domain, nlastmonths) {
     })
 
     if (!res.ok) throw new Error(await res.text())
-    let months = await res.json()
+    let {months, compendium} = await res.json()
 
-    return months
+    return {months, compendium}
   } catch (e) {
     log.error(e)
   }

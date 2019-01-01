@@ -26,14 +26,18 @@ export default function Data({
   })
   const setState = change => replaceState({...state, ...change})
 
-  var pages = mapToEntryList(usingMonths ? months.p : days.compendium.p)
+  var pages = mapToEntryList(
+    usingMonths ? months.compendium.p : days.compendium.p
+  )
   let pagesMore = pages.length > 12
   if (!state.pagesOpen) {
     pages = pages.slice(0, 12)
   }
 
   // the trie magic for referrers
-  var refs = mapToEntryList(usingMonths ? months.r : days.compendium.r)
+  var refs = mapToEntryList(
+    usingMonths ? months.compendium.r : days.compendium.r
+  )
   var referrersTrie
   if (state.referrersTrie) {
     referrersTrie = state.referrersTrie

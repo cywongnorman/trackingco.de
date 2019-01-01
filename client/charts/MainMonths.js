@@ -18,13 +18,13 @@ import {formatmonth, mergeColours} from '../helpers'
 export default function MainDays({colours = {}, months}) {
   colours = mergeColours(colours)
 
-  let data = months.map(({month, s, v, b}) => ({
+  let data = months.months.map(({month, s, v, b}) => ({
     month,
     s,
     v,
     b
   }))
-  let dataMax = Math.max(months.map(({v}) => v))
+  let dataMax = Math.max(months.months.map(({v}) => v))
 
   return (
     <ResponsiveContainer height={300} width="100%">

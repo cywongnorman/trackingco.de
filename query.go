@@ -67,11 +67,20 @@ ORDER BY month DESC
 		return
 	}
 
+	compendium := &Compendium{
+		TopPages:           make(map[string]int),
+		TopReferrers:       make(map[string]int),
+		TopReferrersScores: make(map[string]int),
+	}
 	for i := range months {
 		months[i].unmarshal()
+		compendium.join(months[i].Compendium)
 	}
 
-	return months, nil
+	return struct {
+		Months     []Month    `json:"months"`
+		Compendium Compendium `json:"compendium"`
+	}{months, *compendium}, nil
 }
 
 func queryToday(params Params) (res interface{}, err error) {

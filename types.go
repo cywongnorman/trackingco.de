@@ -90,6 +90,21 @@ func (c *Compendium) apply(session Session) {
 	c.TopReferrersScores[session.Referrer] = scores
 }
 
+func (c *Compendium) join(cc Compendium) {
+	for k, v := range cc.TopPages {
+		prev := c.TopPages[k]
+		c.TopPages[k] = prev + v
+	}
+	for k, v := range cc.TopReferrers {
+		prev := c.TopReferrers[k]
+		c.TopReferrers[k] = prev + v
+	}
+	for k, v := range cc.TopReferrersScores {
+		prev := c.TopReferrersScores[k]
+		c.TopReferrersScores[k] = prev + v
+	}
+}
+
 func (c *Compendium) unmarshal() {
 	json.Unmarshal(c.RawTopPages, &c.TopPages)
 	json.Unmarshal(c.RawTopReferrers, &c.TopReferrers)
