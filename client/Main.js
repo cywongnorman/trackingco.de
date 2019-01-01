@@ -7,5 +7,10 @@ import SiteDetail from './SiteDetail'
 export default function Main() {
   let domain = location.pathname.slice(1)
 
-  return <SiteDetail domain={domain} />
+  return (
+    <div>
+      <nav className="nav" />
+      <SiteDetail domain={domain} />
+    </div>
+  )
 }

@@ -35,68 +35,13 @@ nav
       text-align right !important
   div
     display inline
+
 .card
-  &.empty
-    border 24px #bbb dotted
-    height 242px
-  &.site
-    margin 0 5px
-    .card-header-title
-      overflow hidden
-      text-overflow ellipsis
-      white-space nowrap
-    [contenteditable]
-      min-width 90px
-    [contenteditable]:focus
-      outline none
-      box-shadow none
-      -webkit-box-shadow none
-      border-color inherit
-    .fa
-      &.placeholder
-        display none
-    &:active
-      .recharts-responsive-container
-        display none
-      .fa
-        &.placeholder
-          display block
-          margin-top 50px
-          height 150px
-          font-size 100px
-          color #bbb
-    .card-footer-item
-      &.danger
-        background-color #ff3860
-        color #fff
-      &.save
-        background-color #3273dc
-        color #fff
-  &.newsite
-    &:hover
-      color #bbb
-    .card-content
-      text-align center
-      cursor pointer
-    i
-      &.fa
-        font-size 7em
-        display inline-block
-        margin 30px 0
-    button
-      margin-top 5px
+  margin 12px 12px 12px 0
+
   &.detail-trackingcode
     code
       white-space pre-wrap
-  &.account-plan
-    li
-      display inline-block
-      margin 6px
-  &.account-billing-history
-    .payment
-      & > *
-        display inline-block
-        margin 2px
   &.detail-chart-main
     .recharts-wrapper
       margin-left 21px
@@ -125,34 +70,7 @@ nav
     .twitter-picker
       position absolute !important
       z-index 12
-  &.account-domains
-    li
-      &:not(:last-child)
-        margin-bottom 5px
-  &.account-payments
-    .charge
-      font-family monospace
-      font-size 110%
-      white-space pre-wrap
-      word-break break-all
-      .title
-        text-align center
-      canvas
-        display block
-        margin auto
-        width 260px
-        height 260px
-.card.account-domains,
-.card.account-info,
-.card.account-colours,
-.card.account-payments,
-.card.detail-chart-main,
-.card.detail-chart-individualsessions,
-.card.detail-table,
-.card.detail-today,
-.card.detail-trackingcode,
-.card.detail-about
-  margin 12px 12px 12px 0
+
 .custom-tooltip
   padding 12px
   background white
@@ -162,14 +80,7 @@ nav
     margin-bottom 4px
   .recharts-tooltip-item-list
     text-align right
-.card.account-info table td,
-.card.account-info table th,
-  vertical-align middle
-  .card
-    &.account-payments
-      .pay
-        text-align center
-        margin 32px
+
 button[title]
   overflow visible
 [title]
