@@ -44,7 +44,7 @@ export default function SiteDetail({domain}) {
         months={months}
         usingMonths={usingMonths}
         period={period}
-        updateNLastDays={v => console.log('updatenlast', v)}
+        updateInterval={v => setPeriod({...period, interval: v})}
       />
     </div>
   )

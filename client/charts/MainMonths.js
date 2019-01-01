@@ -16,7 +16,7 @@ const n = require('format-number')({})
 import {formatmonth, mergeColours} from '../helpers'
 
 export default function MainDays({colours = {}, months}) {
-  colours = mergeColours(this.props.colours)
+  colours = mergeColours(colours)
 
   let data = months.map(({month, s, v, b}) => ({
     month,
@@ -45,12 +45,18 @@ export default function MainDays({colours = {}, months}) {
 }
 
 const CustomTooltip = function(props) {
+  if (!props.payload) return <div />
+
   return (
     <div className="custom-tooltip">
       <p className="recharts-tooltip-label">{formatmonth(props.label)}</p>
       <ul className="recharts-tooltip-item-list">
         {props.payload.reverse().map(item => (
-          <li className="recharts-tooltip-item" style={{color: item.color}}>
+          <li
+            key={item.value}
+            className="recharts-tooltip-item"
+            style={{color: item.color}}
+          >
             <span className="recharts-tooltip-item-name">
               {names[item.name]}
             </span>

@@ -13,12 +13,12 @@
     "react-dom": "16.7.0-alpha.2",
     "react-hyperscript": "^3.0.0",
     "react-router-dom": "^4.3.1",
-    "react-tangle-text": "2.4.2",
+    "react-tangle-text": "2.4.3",
     "recharts": "1.4.2",
     "throttleit": "^1.0.0",
     "tiny-emitter": "^1.1.0",
     "url": "^0.11.0",
-    "url-trie": "^1.0.2"
+    "url-trie": "1.1.0"
   },
   "browserify": {
     "transform": [

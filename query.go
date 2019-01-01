@@ -15,8 +15,8 @@ func queryDays(params Params) (res interface{}, err error) {
 	err = pg.Select(&days, `
 SELECT day, sessions FROM days
 WHERE domain = $1
+  AND day > to_char(now() - make_interval(days := $2), 'YYYYMMDD')
 ORDER BY day DESC
-LIMIT $2
     `, params.Domain, params.Last)
 	if err != nil {
 		return
@@ -60,8 +60,8 @@ SELECT month,
   top_referrers --, top_referrers_scores
 FROM months
 WHERE domain = $1
+  AND month > to_char(now() - make_interval(months := $2), 'YYYYMM')
 ORDER BY month DESC
-LIMIT $2
     `, params.Domain, params.Last)
 	if err != nil {
 		return

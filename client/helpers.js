@@ -189,7 +189,7 @@ export function mapToEntryList(map) {
   var list = []
   for (let addr in map) {
     let amount = map[addr]
-    list.push({a: addr, c: amount})
+    list.push({a: addr || '<direct>', c: amount})
   }
   return list.sort((a, b) => b.c - a.c)
 }

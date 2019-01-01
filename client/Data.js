@@ -26,23 +26,19 @@ export default function Data({
   })
   const setState = change => replaceState({...state, ...change})
 
-  var pages = mapToEntryList(
-    usingMonths ? months.top_pages : days.compendium.top_pages
-  )
+  var pages = mapToEntryList(usingMonths ? months.p : days.compendium.p)
   let pagesMore = pages.length > 12
   if (!state.pagesOpen) {
     pages = pages.slice(0, 12)
   }
 
   // the trie magic for referrers
-  var refs = mapToEntryList(
-    usingMonths ? months.top_referrers : days.compendium.top_referrers
-  )
+  var refs = mapToEntryList(usingMonths ? months.r : days.compendium.r)
   var referrersTrie
   if (state.referrersTrie) {
     referrersTrie = state.referrersTrie
   } else {
-    referrersTrie = urlTrie(refs.map(({a, c}) => ({url: a, count: c})), true)
+    referrersTrie = urlTrie(refs.map(({a, c}) => ({url: a, amount: c})), true)
   }
 
   var referrers = []
@@ -50,20 +46,20 @@ export default function Data({
     if (id === 'prev') continue
 
     let data = referrersTrie[id]
-    let countdeep = data.next
-      ? reduceObject(data.next, (acc, _, val) => acc + val.count, 0)
+    let amountdeep = data.next
+      ? reduceObject(data.next, (acc, _, val) => acc + val.amount, 0)
       : 0
     referrers.push({
       addr: id,
-      countdeep,
-      counthere: data.count - countdeep,
+      amountdeep,
+      amounthere: data.amount - amountdeep,
       href: data.url,
       more: data.next
     })
   }
 
   referrers.sort(
-    (a, b) => b.countdeep + b.counthere - (a.countdeep + a.counthere)
+    (a, b) => b.amountdeep + b.amounthere - (a.amountdeep + a.amounthere)
   )
 
   let referrersMore = referrers.length > 12
@@ -80,7 +76,7 @@ export default function Data({
   // }
 
   // let totalSessions = props.site.referrers
-  //   .map(({c: count}) => count)
+  //   .map(({c: amount}) => amount)
   //   .reduce((a, b) => a + b, 0)
 
   return (
@@ -143,7 +139,7 @@ export default function Data({
                 showing {individualSessions.length} sessions{' '}
                 <TangleChangeMinScore>{props}</TangleChangeMinScore> from a
                 total of {totalSessions}{' '}
-              <TangleChangeLastDays updateInterval={updateInterval} period={period}></TangleChangeLastDays>
+              <TangleChangeLastDays updateInterval={updateInterval} period={period} />
               </div>
             </div>
             <div className="card-image">
@@ -201,10 +197,10 @@ export default function Data({
               <div className="card-content">
                 <table className="table">
                   <tbody>
-                    {pages.map(({a: addr, c: count}) => (
-                      <tr>
+                    {pages.map(({a: addr, c: amount}) => (
+                      <tr key={addr}>
                         <td>{addr}</td>
-                        <td>{count}</td>
+                        <td>{amount}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -227,9 +223,7 @@ export default function Data({
                       see more
                     </a>
                   )
-                ) : (
-                  ''
-                )}
+                ) : null}
               </div>
             </div>
           </div>
@@ -266,8 +260,8 @@ export default function Data({
                   )}
                   <tbody>
                     {referrers.map(
-                      ({addr, counthere, countdeep, href, more}) => (
-                        <tr>
+                      ({addr, amounthere, amountdeep, href, more}) => (
+                        <tr key={addr}>
                           <td>
                             {addr + ' '}
                             {href &&
@@ -279,7 +273,7 @@ export default function Data({
                                 </a>
                               )}
                           </td>
-                          <td>{counthere}</td>
+                          <td>{amounthere}</td>
                           <td>
                             {more && [
                               <a
@@ -288,10 +282,10 @@ export default function Data({
                                   more.prev = state.referrersTrie
                                   setState({referrersTrie: more})
                                 }}
-                                title={`other ${countdeep} URL${
-                                  countdeep !== 1 ? 's in paths' : ' in a path'
+                                title={`other ${amountdeep} URL${
+                                  amountdeep !== 1 ? 's in paths' : ' in a path'
                                 } after this`}
-                              >{`↦ ${countdeep}`}</a>
+                              >{`↦ ${amountdeep}`}</a>
                             ]}
                           </td>
                         </tr>
