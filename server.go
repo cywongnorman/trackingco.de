@@ -39,6 +39,11 @@ func fastHTTPHandler(c *fasthttp.RequestCtx) {
 			return
 		}
 
+		if strings.HasPrefix(path, "/sites/") || strings.HasPrefix(path, "/shared/") {
+			handleRedirectOld(c)
+			return
+		}
+
 		serveClient(c)
 	}
 }
@@ -84,4 +89,18 @@ func handleQuery(path string, c *fasthttp.RequestCtx) {
 	}
 
 	ctx.Done()
+}
+
+func handleRedirectOld(c *fasthttp.RequestCtx) {
+	pathparts := strings.Split(string(c.Path()), "/")
+	code := pathparts[len(pathparts)]
+
+	var domain string
+	err := pg.Get(&domain, "SELECT domain FROM temp_migration WHERE code = $1", code)
+	if err != nil {
+		log.Debug().Err(err).Str("path", string(c.Path())).
+			Msg("access requested on an unknown old site code?")
+	}
+
+	c.Redirect("/"+domain, 301)
 }

@@ -37,7 +37,7 @@ func track(c *fasthttp.RequestCtx, session string) {
 	}
 
 	// domain
-	domain := upage.Hostname()
+	domain := strings.TrimPrefix(upage.Hostname(), "www.")
 	logger = logger.With().Str("domain", domain).Logger()
 
 	// event
