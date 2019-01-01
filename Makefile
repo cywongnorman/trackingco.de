@@ -5,10 +5,10 @@ prod: static/bundle.min.js static/style.min.css
 	mv static/style.min.css static/style.css
 
 watch:
-	ag -l --js --ignore bundle.js --ignore bundle.min.js --ignore browserify-cache.json --ignore node_modules | entr make
+	find client | entr make
 
 static/bundle.js: $(shell find client/)
-	godotenv -f .env ./node_modules/.bin/browserify client/app.js -dv --outfile static/bundle.js
+	godotenv -f .env ./node_modules/.bin/browserifyinc client/app.js -dv --outfile static/bundle.js
 
 static/bundle.min.js:  $(shell find client/)
 	./node_modules/.bin/browserify client/app.js -t babelify -g [ envify --NODE_ENV production ] -g uglifyify | ./node_modules/.bin/uglifyjs --compress --mangle > static/bundle.min.js

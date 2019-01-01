@@ -65,6 +65,9 @@ func handleQuery(path string, c *fasthttp.RequestCtx) {
 	case "/query/months":
 		result, err = queryMonths(params)
 		break
+	case "/query/today":
+		result, err = queryToday(params)
+		break
 	}
 
 	if err != nil {

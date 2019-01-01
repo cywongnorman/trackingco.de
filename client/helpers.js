@@ -5,11 +5,18 @@ const color = require('color')
 const levenshtein = require('leven')
 const url = require('url')
 const golangFormat = require('nice-time')
+const months = require('months')
 
 export const MONTH = 'MONTH'
 export const DAY = 'DAY'
 export const DATEFORMAT = '20060102'
 export const MONTHFORMAT = '200601'
+
+export const defaultColours = {
+  bar1: '#4791AE',
+  line1: '#EA8676',
+  background: '#FDEECD'
+}
 
 export function mergeColours() {
   var colours = defaultColours
@@ -24,27 +31,6 @@ export function mergeColours() {
   }
 
   return colours
-}
-
-const defaultColours = {
-  bar1: '#4791AE',
-  line1: '#EA8676',
-  background: '#FDEECD'
-}
-
-const months = require('months')
-export function formatdate(d) {
-  if (d) {
-    let month = months.abbr[parseInt(d.slice(4, 6)) - 1]
-    return d.slice(6) + '/' + month + '/' + d.slice(0, 4)
-  }
-}
-
-export function formatmonth(d) {
-  if (d) {
-    let month = months.abbr[parseInt(d.slice(4, 6)) - 1]
-    return month + '/' + d.slice(0, 4)
-  }
 }
 
 var colourCache = {}
@@ -178,3 +164,32 @@ function makefill(kind) {
 
 export const fillmonths = makefill(MONTH)
 export const filldays = makefill(DAY)
+
+export function encodedate(date) {
+  return golangFormat(DATEFORMAT, date)
+}
+export function encodemonth(date) {
+  return golangFormat(MONTHFORMAT, date)
+}
+
+export function formatdate(d) {
+  if (d) {
+    let month = months.abbr[parseInt(d.slice(4, 6)) - 1]
+    return d.slice(6) + '/' + month + '/' + d.slice(0, 4)
+  }
+}
+export function formatmonth(d) {
+  if (d) {
+    let month = months.abbr[parseInt(d.slice(4, 6)) - 1]
+    return month + '/' + d.slice(0, 4)
+  }
+}
+
+export function mapToEntryList(map) {
+  var list = []
+  for (let addr in map) {
+    let amount = map[addr]
+    list.push({a: addr, c: amount})
+  }
+  return list.sort((a, b) => b.c - a.c)
+}

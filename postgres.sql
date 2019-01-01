@@ -26,7 +26,3 @@ CREATE TABLE temp_migration (
 
   UNIQUE (domain, code)
 );
-
-drop table payments;
-drop table sites;
-drop table users;

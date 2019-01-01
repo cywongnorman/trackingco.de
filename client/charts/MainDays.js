@@ -1,63 +1,65 @@
-const React = require('react')
-const h = require('react-hyperscript')
-const R = require('recharts')
+/** @format */
+
+import React from 'react' // eslint-disable-line no-unused-vars
+import {
+  ResponsiveContainer,
+  ComposedChart,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Bar,
+  Line
+} from 'recharts'
+
 const n = require('format-number')({})
 
-const formatdate = require('../helpers').formatdate
-const mergeColours = require('../helpers').mergeColours
+import {formatdate, mergeColours} from '../helpers'
 
-module.exports = React.createClass({
-  shouldComponentUpdate (nextProps, nextState) {
-    return (this.props.site.days[0].day !== nextProps.site.days[0].day) ||
-      (this.props.site.code !== nextProps.site.code) ||
-      (this.props.site.days.length !== nextProps.site.days.length)
-  },
+export default function MainDays({colours = {}, days}) {
+  colours = mergeColours(colours)
 
-  render () {
-    let colours = mergeColours(this.props.colours)
+  let data = days.days.map((day, i) => ({
+    day,
+    s: days.stats[i].s,
+    v: days.stats[i].v,
+    b: days.stats[i].b
+  }))
+  let dataMax = Math.max(days.stats.map(({v}) => v))
 
-    return (
-      h(R.ResponsiveContainer, {height: 300, width: '100%'}, [
-        h(R.ComposedChart, {data: this.props.site.days}, [
-          h(R.XAxis, {dataKey: 'day', hide: true}),
-          h(R.YAxis, {
-            scale: 'linear',
-            domain: [0, this.props.dataMax],
-            orientation: 'right'
-          }),
-          h(R.Tooltip, {
-            isAnimationActive: false,
-            content: Tooltip
-          }),
-          h(R.Bar, {
-            dataKey: 's',
-            fill: colours.bar1
-          }),
-          h(R.Line, {
-            dataKey: 'v',
-            stroke: colours.line1,
-            type: 'monotone',
-            strokeWidth: 1
-          })
-        ])
-      ])
-    )
-  }
-})
-
-
-const Tooltip = function (props) {
   return (
-    h('div.custom-tooltip', [
-      h('p.recharts-tooltip-label', formatdate(props.label)),
-      h('ul.recharts-tooltip-item-list', props.payload.reverse().map(item =>
-        h('li.recharts-tooltip-item', {style: {color: item.color}}, [
-          h('span.recharts-tooltip-item-name', names[item.name]),
-          h('span.recharts-tooltip-item-separator', ' : '),
-          h('span.recharts-tooltip-item-value', n(item.value))
-        ])
-      ))
-    ])
+    <ResponsiveContainer height={300} width="100%">
+      <ComposedChart data={data}>
+        <XAxis dataKey="day" hide={true} />
+        <YAxis scale="linear" domain={[0, dataMax]} orientation="right" />
+        <Tooltip isAnimationActive={false} content={CustomTooltip} />
+        <Bar dataKey="s" fill={colours.bar1} />
+        <Line
+          dataKey="v"
+          stroke={colours.line1}
+          type="monotone"
+          strokeWidth={1}
+        />
+      </ComposedChart>
+    </ResponsiveContainer>
+  )
+}
+
+const CustomTooltip = function(props) {
+  return (
+    <div className="custom-tooltip">
+      <p className="recharts-tooltip-label">{formatdate(props.label)}</p>
+      <ul className="recharts-tooltip-item-list">
+        {props.payload.reverse().map(item => (
+          <li className="recharts-tooltip-item" style={{color: item.color}}>
+            <span className="recharts-tooltip-item-name">
+              {names[item.name]}
+            </span>
+            <span className="recharts-tooltip-item-separator">:</span>
+            <span className="recharts-tooltip-item-value">{n(item.value)}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 

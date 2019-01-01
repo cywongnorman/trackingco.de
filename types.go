@@ -1,6 +1,10 @@
 package main
 
-import "github.com/jmoiron/sqlx/types"
+import (
+	"encoding/json"
+
+	"github.com/jmoiron/sqlx/types"
+)
 
 type Session struct {
 	Referrer string        `json:"referrer"`
@@ -8,14 +12,14 @@ type Session struct {
 }
 
 type Day struct {
-	Day string `json:"day,omitempty" pg:"day"`
+	Day string `json:"day,omitempty" db:"day"`
 
 	// [{ referrer: 'https://xyz.com/'
 	//  , events: ['/page', 5, '/otherpage', 7]
 	//  }
 	// , ...
 	// ]
-	RawSessions types.JSONText `pg:"sessions" json:"-"`
+	RawSessions types.JSONText `db:"sessions" json:"-"`
 
 	sessions []Session
 }
@@ -44,23 +48,27 @@ func (day Day) stats() (stats Stats) {
 }
 
 type Month struct {
-	Month string `json:"month" pg:"month"`
+	Month string `json:"month" db:"month"`
 
 	Stats
 	Compendium
 }
 
 type Stats struct {
-	NSessions  int `json:"s" pg:"nsessions"`  // total number of sessions
-	NBounces   int `json:"b" pg:"nbounces"`   // sessions with just one pageview
-	NPageviews int `json:"v" pg:"npageviews"` // total number of pageviews
-	Score      int `json:"c" pg:"score"`      // total score (sum of all session scores)
+	NSessions  int `json:"s" db:"nsessions"`  // total number of sessions
+	NBounces   int `json:"b" db:"nbounces"`   // sessions with just one pageview
+	NPageviews int `json:"v" db:"npageviews"` // total number of pageviews
+	Score      int `json:"c" db:"score"`      // total score (sum of all session scores)
 }
 
 type Compendium struct {
-	TopReferrers       map[string]int `json:"r" pg:"top_referrers"`
-	TopPages           map[string]int `json:"p" pg:"top_pages"`
-	TopReferrersScores map[string]int `json:"z" pg:"top_referrers_scores"`
+	TopReferrers       map[string]int `json:"r"`
+	TopPages           map[string]int `json:"p"`
+	TopReferrersScores map[string]int `json:"z"`
+
+	RawTopReferrers       types.JSONText `json:"-" db:"top_referrers"`
+	RawTopPages           types.JSONText `json:"-" db:"top_pages"`
+	RawTopReferrersScores types.JSONText `json:"-" db:"top_referrers_scores"`
 }
 
 func (c *Compendium) apply(session Session) {
@@ -80,4 +88,10 @@ func (c *Compendium) apply(session Session) {
 		}
 	}
 	c.TopReferrersScores[session.Referrer] = scores
+}
+
+func (c *Compendium) unmarshal() {
+	json.Unmarshal(c.RawTopPages, &c.TopPages)
+	json.Unmarshal(c.RawTopReferrers, &c.TopReferrers)
+	json.Unmarshal(c.RawTopReferrersScores, &c.TopReferrersScores)
 }
