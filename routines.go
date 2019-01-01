@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/ogier/pflag"
@@ -21,8 +22,10 @@ func daily() {
 		return
 	}
 	yesterday := parsed.AddDate(0, 0, -1).Format(DATEFORMAT)
-
 	compileDayStats(yesterday)
+
+	moreThan90 := parsed.AddDate(0, -1, -90).Format(DATEFORMAT)
+	deleteDaysOlderThan(moreThan90)
 }
 
 func monthly() {
@@ -40,7 +43,6 @@ func monthly() {
 		return
 	}
 	lastmonth := parsed.AddDate(0, -1, 0).Format(MONTHFORMAT)
-
 	compileMonthStats(lastmonth)
 }
 
@@ -155,9 +157,6 @@ WITH sessions AS (
     (SELECT top_referrers FROM top_referrers) AS top_referrers,
     (SELECT top_referrers_scores FROM top_referrers_scores) AS top_referrers_scores,
     (SELECT top_pages FROM top_pages) AS top_pages
-), del AS (
-  DELETE FROM days
-  WHERE domain = $1 AND day >= $2 AND day <= $3
 )
 
 INSERT INTO months
@@ -173,4 +172,24 @@ INSERT INTO months
 		log.Print("   : monthly stats built.")
 
 	}
+}
+
+func deleteDaysOlderThan(dayInThePast string) {
+	log.Print("-- deleting days older than " + dayInThePast)
+	r, err := pg.Exec(`
+DELETE FROM days
+WHERE day <= $1
+    `, dayInThePast)
+	if err != nil {
+		log.Print("  : failed to delete old days: ", err)
+		return
+	}
+
+	rows, err := r.RowsAffected()
+	if err != nil {
+		log.Print("  : failed to get number of affected rows: ", err)
+		return
+	}
+
+	log.Print("  : deleted " + strconv.Itoa(int(rows)) + " old days.")
 }
