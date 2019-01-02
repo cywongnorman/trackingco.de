@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"mime"
+	"path/filepath"
 	"strings"
 
 	"github.com/valyala/fasthttp"
@@ -25,9 +27,9 @@ func fastHTTPHandler(c *fasthttp.RequestCtx) {
 
 	switch path {
 	case "/":
-		c.SendFile("static/landing.html")
+		sendAsset(c, "static/landing.html")
 	case "/favicon.ico":
-		c.SendFile("static/logo.png")
+		sendAsset(c, "static/logo.png")
 	default:
 		if strings.HasPrefix(path, "/query/") {
 			handleQuery(path, c)
@@ -35,7 +37,7 @@ func fastHTTPHandler(c *fasthttp.RequestCtx) {
 		}
 
 		if strings.HasPrefix(path, "/static/") {
-			fasthttp.FSHandler(".", 0)(c)
+			sendAsset(c, path[1:])
 			return
 		}
 
@@ -49,7 +51,7 @@ func fastHTTPHandler(c *fasthttp.RequestCtx) {
 }
 
 func serveClient(c *fasthttp.RequestCtx) {
-	c.SendFile("static/index.html")
+	sendAsset(c, "static/index.html")
 }
 
 func handleQuery(path string, c *fasthttp.RequestCtx) {
@@ -103,4 +105,16 @@ func handleRedirectOld(c *fasthttp.RequestCtx) {
 	}
 
 	c.Redirect("/"+domain, 301)
+}
+
+func sendAsset(c *fasthttp.RequestCtx, path string) {
+	ext := filepath.Ext(path)
+	c.SetContentType(mime.TypeByExtension(ext))
+
+	data, err := Asset(path)
+	if err != nil {
+		c.Error("asset "+path+" not found", 404)
+		return
+	}
+	c.SetBody(data)
 }

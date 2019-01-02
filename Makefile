@@ -1,8 +1,16 @@
-all: static/bundle.js static/style.css
+all: static/bundle.js static/style.css trackingco.de
 
-prod: static/bundle.min.js static/style.min.css
+prod: static/bundle.min.js static/style.min.css $(shell find . -name '*.go')
 	mv static/bundle.min.js static/bundle.js
 	mv static/style.min.css static/style.css
+	go-bindata static/
+	go build -o ./trackingco.de
+
+trackingco.de: $(shell find . -name '*.go') bindata.go
+	go build -o ./trackingco.de
+
+bindata.go: $(shell find static/) $(shell find . -name '*.go')
+	go-bindata -debug -nocompress static/
 
 watch:
 	find client | entr make
