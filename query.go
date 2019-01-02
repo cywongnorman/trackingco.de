@@ -16,7 +16,7 @@ func queryDays(params Params) (res interface{}, err error) {
 SELECT day, sessions FROM days
 WHERE domain = $1
   AND day > to_char(now() - make_interval(days := $2), 'YYYYMMDD')
-ORDER BY day DESC
+ORDER BY day
     `, params.Domain, params.Last)
 	if err != nil {
 		return
@@ -62,7 +62,7 @@ SELECT month,
 FROM months
 WHERE domain = $1
   AND month > to_char(now() - make_interval(months := $2), 'YYYYMM')
-ORDER BY month DESC
+ORDER BY month
     `, params.Domain, params.Last)
 	if err != nil {
 		return
