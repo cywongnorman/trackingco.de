@@ -39,7 +39,9 @@ func (day Day) stats() (stats Stats) {
 		}
 
 		if len(s.Events) == 1 {
-			if _, isPage := s.Events[0].(string); isPage {
+			_, isPage := s.Events[0].(string)
+			points, isPoints := s.Events[0].(int)
+			if isPage || (isPoints && points == 0) {
 				stats.NBounces++
 			}
 		}

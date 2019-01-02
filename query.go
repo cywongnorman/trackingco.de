@@ -57,7 +57,8 @@ func queryMonths(params Params) (res interface{}, err error) {
 SELECT month,
   nbounces, nsessions, npageviews, score,
   top_pages,
-  top_referrers --, top_referrers_scores
+  top_referrers,
+  top_referrers_scores
 FROM months
 WHERE domain = $1
   AND month > to_char(now() - make_interval(months := $2), 'YYYYMM')

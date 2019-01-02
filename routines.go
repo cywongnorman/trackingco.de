@@ -114,7 +114,7 @@ WITH sessions AS (
   SELECT count(*) AS nbounces
   FROM sessions
   WHERE jsonb_array_length(session->'events') = 1
-    AND jsonb_typeof(session->'events'->0) = 'string'
+    AND (jsonb_typeof(session->'events'->0) = 'string' OR (session->'events'->0)::text::int = 1)
 ), pages AS (
   SELECT event#>>'{}' AS page
   FROM events
@@ -154,9 +154,9 @@ WITH sessions AS (
     (SELECT nbounces FROM nbounces) AS nbounces,
     (SELECT count(*) FROM sessions) AS nsessions,
     (SELECT count(*) FROM pages) AS npageviews,
-    (SELECT top_referrers FROM top_referrers) AS top_referrers,
-    (SELECT top_referrers_scores FROM top_referrers_scores) AS top_referrers_scores,
-    (SELECT top_pages FROM top_pages) AS top_pages
+    (SELECT coalesce(top_referrers, '{}') FROM top_referrers) AS top_referrers,
+    (SELECT coalesce(top_referrers_scores, '{}') FROM top_referrers_scores) AS top_referrers_scores,
+    (SELECT coalesce(top_pages, '{}') FROM top_pages) AS top_pages
 )
 
 INSERT INTO months
