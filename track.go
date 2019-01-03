@@ -67,7 +67,7 @@ func track(c *fasthttp.RequestCtx, session string) {
 	}
 
 	// plumbing
-	threedays := time.Hour * 72
+	redisExpireInterval := time.Hour * 24 * 7
 	today := presentDay().Format(DATEFORMAT)
 	keyfn := redisKeyFactory(domain, today)
 
@@ -119,11 +119,11 @@ func track(c *fasthttp.RequestCtx, session string) {
 	}
 
 	// expire session data
-	rds.Expire(keyfn(session), threedays)
+	rds.Expire(keyfn(session), redisExpireInterval)
 
 	// add this domain to the list of domains that should be compiled today
 	rds.SAdd("compile:"+today, domain)
-	rds.Expire("compile:"+today, threedays)
+	rds.Expire("compile:"+today, redisExpireInterval)
 
 	if err != nil {
 		logger.Warn().Err(err).Msg("error tracking")
