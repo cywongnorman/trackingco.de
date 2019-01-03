@@ -71,13 +71,6 @@ func track(c *fasthttp.RequestCtx, session string) {
 	today := presentDay().Format(DATEFORMAT)
 	keyfn := redisKeyFactory(domain, today)
 
-	// temp
-	code := string(c.FormValue("c"))
-	_, err = pg.Exec(`INSERT INTO temp_migration VALUES ($1, $2) ON CONFLICT (domain, code) DO NOTHING`, domain, code)
-	if err != nil {
-		log.Error().Err(err).Msg("temp")
-	}
-
 	// referrer
 	referrer := string(c.FormValue("r")) // may be "". means <direct>.
 	if referrer != "" {
