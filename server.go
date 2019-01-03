@@ -95,10 +95,10 @@ func handleQuery(path string, c *fasthttp.RequestCtx) {
 
 func handleRedirectOld(c *fasthttp.RequestCtx) {
 	pathparts := strings.Split(string(c.Path()), "/")
-	code := pathparts[len(pathparts)]
+	code := pathparts[len(pathparts)-1]
 
 	var domain string
-	err := pg.Get(&domain, "SELECT domain FROM temp_migration WHERE code = $1", code)
+	err := pg.Get(&domain, "SELECT domain FROM temp_migration WHERE code = $1 LIMIT 1", code)
 	if err != nil {
 		log.Debug().Err(err).Str("path", string(c.Path())).
 			Msg("access requested on an unknown old site code?")
