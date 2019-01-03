@@ -11,6 +11,7 @@ import MainDays from './charts/MainDays'
 import MainMonths from './charts/MainMonths'
 
 export default function Data({
+  domain,
   today,
   usingMonths,
   days,
@@ -201,7 +202,17 @@ export default function Data({
                   <tbody>
                     {pages.map(({a: addr, c: amount}) => (
                       <tr key={addr}>
-                        <td>{addr}</td>
+                        <td>
+                          {addr + ' '}
+                          <a
+                            target="_blank"
+                            href={`http://${domain}${addr.split('?')[0]}`}
+                          >
+                            <img
+                              src={`data:image/svg+xml,<%3Fxml%20version%3D"1.0"%20encoding%3D"UTF-8"%20standalone%3D"no"%3F><svg%20xmlns%3D"http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg"%20width%3D"12"%20height%3D"12"><path%20fill%3D"%23fff"%20stroke%3D"%2306c"%20d%3D"M1.5%204.518h5.982V10.5H1.5z"%2F><path%20d%3D"M5.765%201H11v5.39L9.427%207.937l-1.31-1.31L5.393%209.35l-2.69-2.688%202.81-2.808L4.2%202.544z"%20fill%3D"%2306f"%2F><path%20d%3D"M9.995%202.004l.022%204.885L8.2%205.07%205.32%207.95%204.09%206.723l2.882-2.88-1.85-1.852z"%20fill%3D"%23fff"%2F><%2Fsvg>`}
+                            />
+                          </a>
+                        </td>
                         <td>{amount}</td>
                       </tr>
                     ))}
@@ -268,7 +279,7 @@ export default function Data({
                             {addr + ' '}
                             {href &&
                               addr !== '<direct>' && (
-                                <a target="_blank" href={href}>
+                                <a target="_blank" href={href.split('?')[0]}>
                                   <img
                                     src={`data:image/svg+xml,<%3Fxml%20version%3D"1.0"%20encoding%3D"UTF-8"%20standalone%3D"no"%3F><svg%20xmlns%3D"http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg"%20width%3D"12"%20height%3D"12"><path%20fill%3D"%23fff"%20stroke%3D"%2306c"%20d%3D"M1.5%204.518h5.982V10.5H1.5z"%2F><path%20d%3D"M5.765%201H11v5.39L9.427%207.937l-1.31-1.31L5.393%209.35l-2.69-2.688%202.81-2.808L4.2%202.544z"%20fill%3D"%2306f"%2F><path%20d%3D"M9.995%202.004l.022%204.885L8.2%205.07%205.32%207.95%204.09%206.723l2.882-2.88-1.85-1.852z"%20fill%3D"%23fff"%2F><%2Fsvg>`}
                                   />

@@ -39,6 +39,7 @@ export default function SiteDetail({domain}) {
         <h4 className="title is-3">{domain}</h4>
       </div>
       <Data
+        domain={domain}
         today={today}
         days={days}
         months={months}
