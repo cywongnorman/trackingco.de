@@ -98,11 +98,9 @@ export default function Data({
           <div className="column is-third">
             <div className="card detail-today has-text-centered">
               <div className="card-content">
-                <h4 className="subtitle is-4">Bounce rate today:</h4>
+                <h4 className="subtitle is-4">Bounces today:</h4>
                 <h1 className="title is-1">
-                  {typeof today.b === 'number'
-                    ? (today.b * 100).toFixed(1) + '%'
-                    : '-'}
+                  {typeof today.b === 'number' ? today.b : '-'}
                 </h1>
               </div>
             </div>

@@ -11,20 +11,21 @@ import {
   Line
 } from 'recharts'
 
-const n = require('format-number')({})
-
 import {formatdate, mergeColours} from '../helpers'
+import customTooltipComponent from './customTooltip'
+
+const CustomTooltip = customTooltipComponent(formatdate)
 
 export default function MainDays({colours = {}, days}) {
   colours = mergeColours(colours)
 
   let data = days.days.map((day, i) => ({
-    day,
-    s: days.stats[i].s,
-    v: days.stats[i].v,
-    b: days.stats[i].b
+    day: day.day,
+    s: day.s,
+    v: day.v,
+    b: day.b
   }))
-  let dataMax = Math.max(days.stats.map(({v}) => v))
+  let dataMax = Math.max(days.days.map(({v}) => v))
 
   return (
     <ResponsiveContainer height={300} width="100%">
@@ -42,34 +43,4 @@ export default function MainDays({colours = {}, days}) {
       </ComposedChart>
     </ResponsiveContainer>
   )
-}
-
-const CustomTooltip = function(props) {
-  if (!props.payload) return <div />
-
-  return (
-    <div className="custom-tooltip">
-      <p className="recharts-tooltip-label">{formatdate(props.label)}</p>
-      <ul className="recharts-tooltip-item-list">
-        {props.payload.reverse().map(item => (
-          <li
-            key={item.value}
-            className="recharts-tooltip-item"
-            style={{color: item.color}}
-          >
-            <span className="recharts-tooltip-item-name">
-              {names[item.name]}
-            </span>
-            <span className="recharts-tooltip-item-separator">: </span>
-            <span className="recharts-tooltip-item-value">{n(item.value)}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
-
-const names = {
-  s: 'unique sessions',
-  v: 'all pageviews'
 }

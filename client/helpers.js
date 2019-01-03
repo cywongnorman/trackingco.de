@@ -88,13 +88,11 @@ export const title = name =>
   name ? `${name} | trackingco.de` : 'trackingco.de'
 
 function makefill(kind) {
-  var format
-  var previous
-  var next
-  var frombeggining
-  var key
+  const blank = {s: 0, b: 0, v: 0, c: 0}
+  var format, previous, next, frombeggining, key
 
   if (kind === MONTH) {
+    key = 'month'
     format = MONTHFORMAT
     previous = curr => {
       let prev = new Date(curr)
@@ -111,8 +109,8 @@ function makefill(kind) {
       current.setMonth(current.getMonth() - offset)
       return current
     }
-    key = 'month'
   } else if (kind === DAY) {
+    key = 'day'
     format = DATEFORMAT
     previous = curr => {
       let prev = new Date(curr)
@@ -129,10 +127,9 @@ function makefill(kind) {
       next.setDate(next.getDate() + 1)
       return next
     }
-    key = 'day'
   }
 
-  return function(periods, offset, start) {
+  return function fill(periods, offset, start) {
     // fill in missing periods (days/months) with zeroes
     var allperiods = new Array(offset)
 
@@ -144,14 +141,14 @@ function makefill(kind) {
     var currentpos = 0
     var rowpos = 0
 
-    while (current < prev) {
+    while (current <= prev) {
       let currentDate = golangFormat(format, current)
 
-      if (periods[rowpos][key] === currentDate) {
+      if (periods[rowpos] && periods[rowpos][key] === currentDate) {
         allperiods[currentpos] = periods[rowpos]
         rowpos++
       } else {
-        allperiods[currentpos] = {[key]: currentDate}
+        allperiods[currentpos] = {...blank, [key]: currentDate}
       }
 
       current = next(current)
@@ -162,8 +159,8 @@ function makefill(kind) {
   }
 }
 
-export const fillmonths = makefill(MONTH)
-export const filldays = makefill(DAY)
+export const fillMonths = makefill(MONTH)
+export const fillDays = makefill(DAY)
 
 export function encodedate(date) {
   return golangFormat(DATEFORMAT, date)

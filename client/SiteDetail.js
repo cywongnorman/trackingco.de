@@ -6,7 +6,7 @@ const fetch = window.fetch
 
 import Data from './Data'
 import log from './log'
-import {encodedate} from './helpers'
+import {encodedate, fillDays, fillMonths} from './helpers'
 
 export default function SiteDetail({domain}) {
   let [period, setPeriod] = useState({
@@ -15,7 +15,7 @@ export default function SiteDetail({domain}) {
   })
 
   let [today, setToday] = useState({})
-  let [days, setDays] = useState({days: [], stats: [], compendium: {}})
+  let [days, setDays] = useState({days: [], compendium: {}})
   let [months, setMonths] = useState({months: [], compendium: {}})
 
   useEffect(
@@ -65,11 +65,15 @@ async function queryDays(domain, nlastdays) {
     })
 
     if (!res.ok) throw new Error(await res.text())
-    let {days, stats, compendium} = await res.json()
+    var {days, stats, compendium} = await res.json()
+
+    days = days.map((day, i) => ({
+      day,
+      ...stats[i]
+    }))
 
     return {
-      days,
-      stats,
+      days: fillDays(days, nlastdays),
       compendium
     }
   } catch (e) {
@@ -94,7 +98,10 @@ async function queryMonths(domain, nlastmonths) {
     if (!res.ok) throw new Error(await res.text())
     let {months, compendium} = await res.json()
 
-    return {months, compendium}
+    return {
+      months: fillMonths(months, nlastmonths),
+      compendium
+    }
   } catch (e) {
     log.error(e)
   }
