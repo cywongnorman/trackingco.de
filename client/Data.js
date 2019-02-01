@@ -6,7 +6,7 @@ const TangleText = require('react-tangle-text')
 const urlTrie = require('url-trie')
 const reduceObject = require('just-reduce-object')
 
-import {mapToEntryList} from './helpers'
+import {mapToEntryList, fixReferrerEntry} from './helpers'
 import MainDays from './charts/MainDays'
 import MainMonths from './charts/MainMonths'
 
@@ -38,7 +38,7 @@ export default function Data({
   // the trie magic for referrers
   var refs = mapToEntryList(
     usingMonths ? months.compendium.r : days.compendium.r
-  )
+  ).map(fixReferrerEntry)
   var referrersTrie
   if (state.referrersTrie) {
     referrersTrie = state.referrersTrie

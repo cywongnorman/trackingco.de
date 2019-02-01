@@ -186,7 +186,19 @@ export function mapToEntryList(map) {
   var list = []
   for (let addr in map) {
     let amount = map[addr]
-    list.push({a: addr || '<direct>', c: amount})
+    list.push({a: addr, c: amount})
   }
   return list.sort((a, b) => b.c - a.c)
+}
+
+export function fixReferrerEntry({a, c}) {
+  return {
+    a:
+      a.length === 0
+        ? '<direct>'
+        : a.indexOf('.') < 2 || a.indexOf('.') === a.length - 1
+          ? '<unknown>'
+          : 'http://' + a,
+    c
+  }
 }
